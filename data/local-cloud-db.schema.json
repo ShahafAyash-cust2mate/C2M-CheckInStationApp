@@ -1,0 +1,96 @@
+{
+  "Customers": [
+    {
+      "CustomerId": null,
+      "CustomerName": ""
+    }
+  ],
+  "Stores": [
+    {
+      "StoreId": null,
+      "CustomerId": null,
+      "StoreName": ""
+    }
+  ],
+  "ChargingWallModels": [
+    {
+      "ChargingWallModelId": null,
+      "Description": "",
+      "Model": "",
+      "RowCount": null,
+      "ColumnCount": null,
+      "HasWelcomeScreen": false,
+      "WelcomeScreenRowNumber": null,
+      "WelcomeScreenColumnNumber": null,
+      "WelcomeScreenRowSize": null,
+      "WelcomeScreenColumnSize": null
+    }
+  ],
+  "CheckInStations": [
+    {
+      "CheckInStationId": null,
+      "Name": "",
+      "StoreId": null
+    }
+  ],
+  "ChargingWalls": [
+    {
+      "ChargingWallId": null,
+      "ChargingWallModelId": null,
+      "CheckInStationId": null,
+      "SerialNumber": "",
+      "ChargingWallIndex": null
+    }
+  ],
+  "WelcomeScreens": [
+    {
+      "WelcomeScreenId": null,
+      "ChargingWallId": null,
+      "SerialNumber": ""
+    }
+  ],
+  "ChargingSlots": [
+    {
+      "ChargingSlotId": null,
+      "ChargingWallId": null,
+      "NFCCode": "",
+      "RowNumber": null,
+      "ColumnNumber": null
+    }
+  ],
+  "ControlUnits": [
+    {
+      "ControlUnitId": null,
+      "ControlUnitSN": "",
+      "StoreId": null
+    }
+  ],
+  "ControlUnitTwin": [
+    {
+      "ControlUnitId": null,
+      "Status": "",
+      "nfc_code": "",
+      "Battery": {
+        "capacity": null,
+        "is_charging": false
+      },
+      "alert_note": "",
+      "operational_status": "",
+      "control_unit_app_version": ""
+    }
+  ],
+  "CheckInStationZones": [
+    {
+      "CheckInStationZoneId": null,
+      "CheckInStationId": null,
+      "ZoneName": ""
+    }
+  ],
+  "CheckInStationZoneSlots": [
+    {
+      "CheckInStationZoneSlotId": null,
+      "CheckInStationZoneId": null,
+      "ChargingSlotId": null
+    }
+  ]
+}

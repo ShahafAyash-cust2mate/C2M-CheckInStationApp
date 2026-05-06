@@ -4,7 +4,6 @@ const http = require('http');
 const url = 'http://127.0.0.1:5173';
 const timeoutMs = 30000;
 const startedAt = Date.now();
-let started = false;
 
 function ping() {
   http.get(url, (res) => {
@@ -15,13 +14,11 @@ function ping() {
       console.error('Vite server did not start within 30 seconds');
       process.exit(1);
     }
-    setTimeout(ping, 400);
+    setTimeout(ping, 500);
   });
 }
 
 function startElectron() {
-  if (started) return;
-  started = true;
   const electronCmd = process.platform === 'win32'
     ? '.\\node_modules\\.bin\\electron.cmd'
     : './node_modules/.bin/electron';
