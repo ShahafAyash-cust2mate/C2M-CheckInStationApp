@@ -1,0 +1,43 @@
+{
+  "Customers": [
+    { "CustomerId": 1, "CustomerName": "יוחננוף" }
+  ],
+  "Stores": [
+    { "StoreId": 1, "CustomerId": 1, "StoreName": "סגולה" },
+    { "StoreId": 2, "CustomerId": 1, "StoreName": "רחובות" }
+  ],
+  "ChargingWallModels": [
+    {
+      "ChargingWallModelId": 1,
+      "Description": "without welcome screen",
+      "Model": "C2M-403-G4",
+      "RowCount": 4,
+      "ColumnCount": 5,
+      "HasWelcomeScreen": false,
+      "WelcomeScreenRowNumber": 0,
+      "WelcomeScreenColumnNumber": 0,
+      "WelcomeScreenRowSize": 0,
+      "WelcomeScreenColumnSize": 0
+    },
+    {
+      "ChargingWallModelId": 2,
+      "Description": "with welcome screen",
+      "Model": "C2M-403-G4-WS",
+      "RowCount": 4,
+      "ColumnCount": 5,
+      "HasWelcomeScreen": true,
+      "WelcomeScreenRowNumber": 1,
+      "WelcomeScreenColumnNumber": 0,
+      "WelcomeScreenRowSize": 1,
+      "WelcomeScreenColumnSize": 3
+    }
+  ],
+  "CheckInStations": [],
+  "ChargingWalls": [],
+  "WelcomeScreens": [],
+  "ChargingSlots": [],
+  "ControlUnits": [],
+  "ControlUnitTwin": [],
+  "CheckInStationZones": [],
+  "CheckInStationZoneSlots": []
+}

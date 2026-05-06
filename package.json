@@ -1,0 +1,22 @@
+{
+  "name": "c2m-checkin-station-setup",
+  "version": "0.7.0",
+  "private": true,
+  "main": "src/main/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k -n VITE,ELECTRON -c green,blue \"vite --host 127.0.0.1 --port 5173 --strictPort\" \"node scripts/wait-and-start-electron.cjs\"",
+    "check": "node --check src/main/main.cjs && node --check src/main/preload.cjs && node --check src/cloud/localCloud.cjs && node --check scripts/wait-and-start-electron.cjs",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.21",
+    "typescript": "^5.6.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "electron": "^33.2.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
