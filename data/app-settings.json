@@ -1,0 +1,9 @@
+{
+  "nfcActionTimeoutMs": 10000,
+  "chargeDetectTimeoutMs": 10000,
+  "nfcActionDelayMs": 3000,
+  "nfcImmediateAction": true,
+  "scannerMacFragment": "",
+  "scannerReadTimeoutMs": 20000,
+  "arduinoCommandTimeoutMs": 2500
+}

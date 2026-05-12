@@ -52,9 +52,179 @@
     }
   ],
   "CheckInStations": [],
-  "ChargingWalls": [],
+  "ChargingWalls": [
+    {
+      "ChargingWallId": 1,
+      "ChargingWallModelId": 1,
+      "CheckInStationId": null,
+      "SerialNumber": "1122",
+      "ChargingWallIndex": null,
+      "Status": 0
+    }
+  ],
   "WelcomeScreens": [],
-  "ChargingSlots": [],
+  "ChargingSlots": [
+    {
+      "ChargingSlotId": 1,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000001",
+      "RowNumber": 0,
+      "ColumnNumber": 0,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 2,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000002",
+      "RowNumber": 0,
+      "ColumnNumber": 1,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 3,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000003",
+      "RowNumber": 0,
+      "ColumnNumber": 2,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 4,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000004",
+      "RowNumber": 0,
+      "ColumnNumber": 3,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 5,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000005",
+      "RowNumber": 0,
+      "ColumnNumber": 4,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 6,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000006",
+      "RowNumber": 1,
+      "ColumnNumber": 0,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 7,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000007",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 8,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000008",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 9,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000009",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 10,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000010",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 11,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000011",
+      "RowNumber": 2,
+      "ColumnNumber": 0,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 12,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000012",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 13,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000013",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 14,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000014",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 15,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000015",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 16,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000016",
+      "RowNumber": 3,
+      "ColumnNumber": 0,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 17,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000017",
+      "RowNumber": 3,
+      "ColumnNumber": 1,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 18,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000018",
+      "RowNumber": 3,
+      "ColumnNumber": 2,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 19,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000019",
+      "RowNumber": 3,
+      "ColumnNumber": 3,
+      "Status": 0
+    },
+    {
+      "ChargingSlotId": 20,
+      "ChargingWallId": 1,
+      "NFCCode": "CW0000000020",
+      "RowNumber": 3,
+      "ColumnNumber": 4,
+      "Status": 0
+    }
+  ],
   "ControlUnits": [],
   "ControlUnitTwin": [],
   "CheckInStationZones": [],
