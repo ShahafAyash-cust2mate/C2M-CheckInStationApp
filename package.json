@@ -1,6 +1,6 @@
 {
   "name": "c2m-checkin-station-setup",
-  "version": "0.66.0",
+  "version": "0.86.0",
   "private": true,
   "main": "src/main/main.cjs",
   "scripts": {

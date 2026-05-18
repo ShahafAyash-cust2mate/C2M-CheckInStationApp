@@ -1,0 +1,11 @@
+v80 verification:
+- getCustomers calls only: ${retailerBaseUrl}/
+- getStoresByCustomer calls only: ${retailerBaseUrl}/stores?retailerId=...
+- Default retailerBaseUrl: https://customer1.cart.dev.do-c2m.com/retailer/v1
+- Swagger docs URLs are normalized to API root by stripping /docs#/
+- No getCustomers fallback to /device-management/v1/retailers exists in src/cloud/remoteCloud.cjs
+
+To verify after extraction:
+findstr /C:"v80 Retailer API getCustomers direct" src\cloud\remoteCloud.cjs
+findstr /C:"device-management/v1/retailers" src\cloud\remoteCloud.cjs
+The second command should print nothing.

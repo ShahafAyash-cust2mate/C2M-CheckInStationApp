@@ -1,0 +1,7 @@
+v86:
+- Fixed retailer endpoint.
+- App now calls:
+  GET {RetailerBaseUrl}/retailers
+- Settings should contain only:
+  https://customer1.cart.dev.do-c2m.com/retailer/v1
+- Stores still come from embedded retailer response.

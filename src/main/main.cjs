@@ -1,13 +1,35 @@
-const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, shell } = require('electron');
 const path = require('path');
-const cloud = require('../cloud/localCloud.cjs');
+const remoteCloud = require('../cloud/remoteCloud.cjs');
 const nfc = require('../nfc/pn532Service.cjs');
 const settingsService = require('../settings/settingsService.cjs');
+const logger = require('../utils/logger.cjs');
 const scanner = require('../scanner/scannerBleService.cjs');
 const arduino = require('../devices/arduinoService.cjs');
 
 
+function cloud() {
+  logger.info('Cloud provider selected', { provider: 'remote-only' });
+  return remoteCloud;
+}
 
+
+function attachRendererLogging(win, name) {
+  try {
+    win.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      if (level >= 2) logger.error(`Renderer console ${name}`, { level, message, line, sourceId });
+      else logger.info(`Renderer console ${name}`, { level, message, line, sourceId });
+    });
+    win.webContents.on('render-process-gone', (_event, details) => {
+      logger.error(`Renderer process gone ${name}`, details);
+    });
+    win.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      logger.error(`Renderer did-fail-load ${name}`, { errorCode, errorDescription, validatedURL });
+    });
+  } catch (e) {
+    logger.error('attachRendererLogging failed', { message: e.message || String(e) });
+  }
+}
 
 function createSettingsWindow() {
   const win = new BrowserWindow({
@@ -22,6 +44,7 @@ function createSettingsWindow() {
     }
   });
 
+  attachRendererLogging(win, "settings");
   const url = process.env.VITE_DEV_SERVER_URL;
   if (url) win.loadURL(`${url}#settings`);
   else win.loadFile(path.join(__dirname, '../../dist/renderer/index.html'), { hash: 'settings' });
@@ -41,6 +64,7 @@ function createDeviceManagerWindow() {
   });
 
   win.maximize();
+  attachRendererLogging(win, "device-manager");
   const url = process.env.VITE_DEV_SERVER_URL;
   if (url) win.loadURL(`${url}#device-manager`);
   else win.loadFile(path.join(__dirname, '../../dist/renderer/index.html'), { hash: 'device-manager' });
@@ -61,24 +85,10 @@ function createAppMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Reset app data to default',
+          label: 'Open cloud log folder',
           click: async () => {
-            const result = await dialog.showMessageBox({
-              type: 'warning',
-              buttons: ['Cancel', 'Reset'],
-              defaultId: 0,
-              cancelId: 0,
-              title: 'Reset app data',
-              message: 'Reset app data to default?',
-              detail: 'This will overwrite data/local-cloud-db.json with data/local-cloud-db-default.json.'
-            });
-            if (result.response !== 1) return;
-            try {
-              cloud.resetDbToDefault();
-              BrowserWindow.getAllWindows().forEach((window) => window.reload());
-            } catch (error) {
-              dialog.showErrorBox('Reset failed', error.message || String(error));
-            }
+            logger.info('Open cloud log folder requested', { logPath: logger.logPath() });
+            await shell.openPath(logger.logDir());
           }
         },
         { type: 'separator' },
@@ -106,6 +116,7 @@ function createWindow() {
   });
 
   win.maximize();
+  attachRendererLogging(win, "main");
   const url = process.env.VITE_DEV_SERVER_URL;
   if (url) win.loadURL(url);
   else win.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
@@ -129,19 +140,33 @@ ipcMain.handle('arduino:turnHandleLedOn', (_e, payload) => arduino.turnHandleLed
 ipcMain.handle('arduino:turnHandleLedOff', (_e, portPath) => arduino.turnHandleLedOff(portPath));
 ipcMain.handle('arduino:sendCommand', (_e, payload) => arduino.sendCommandToArduino(payload.portPath, payload.command, payload.payload || '', payload.timeoutMs));
 
-ipcMain.handle('cloud:getDb', () => cloud.getDb());
-ipcMain.handle('cloud:resetDbToDefault', () => cloud.resetDbToDefault());
-ipcMain.handle('cloud:getCustomers', () => cloud.getCustomers());
-ipcMain.handle('cloud:getStoresByCustomer', (_e, id) => cloud.getStoresByCustomer(id));
-ipcMain.handle('cloud:getWallModels', () => cloud.getWallModels());
-ipcMain.handle('cloud:createWall', (_e, p) => cloud.createWall(p));
-ipcMain.handle('cloud:getUnassignedWalls', () => cloud.getUnassignedWalls());
-ipcMain.handle('cloud:getUnassignedWallBySerial', (_e, serialNumber) => cloud.getUnassignedWallBySerial(serialNumber));
-ipcMain.handle('cloud:getWallDetails', (_e, id) => cloud.getWallDetails(id));
-ipcMain.handle('cloud:allocateSlotNfcSerials', (_e, id) => cloud.allocateSlotNfcSerials(id));
-ipcMain.handle('cloud:saveWallConfiguration', (_e, p) => cloud.saveWallConfiguration(p));
-ipcMain.handle('cloud:createCheckInStation', (_e, p) => cloud.createCheckInStation(p));
-ipcMain.handle('cloud:validateWelcomeScreenSerial', (_e, payload) => cloud.validateWelcomeScreenSerial(payload.serialNumber, payload.chargingWallId));
+
+function cloudHandle(name, fn) {
+  ipcMain.handle(name, async (_event, ...args) => {
+    logger.info(`IPC ${name} start`, { args });
+    try {
+      const result = await fn(...args);
+      logger.info(`IPC ${name} success`, { result });
+      return result;
+    } catch (error) {
+      logger.error(`IPC ${name} failed`, { message: error.message || String(error), stack: error.stack });
+      throw error;
+    }
+  });
+}
+cloudHandle('cloud:getDb', () => cloud().getDb());
+cloudHandle('cloud:resetDbToDefault', () => cloud().resetDbToDefault());
+cloudHandle('cloud:getCustomers', () => cloud().getCustomers());
+cloudHandle('cloud:getStoresByCustomer', (id) => cloud().getStoresByCustomer(id));
+cloudHandle('cloud:getWallModels', () => cloud().getWallModels());
+cloudHandle('cloud:createWall', (p) => cloud().createWall(p));
+cloudHandle('cloud:getUnassignedWalls', () => cloud().getUnassignedWalls());
+cloudHandle('cloud:getUnassignedWallBySerial', (serialNumber) => cloud().getUnassignedWallBySerial(serialNumber));
+cloudHandle('cloud:getWallDetails', (id) => cloud().getWallDetails(id));
+cloudHandle('cloud:allocateSlotNfcSerials', (id) => cloud().allocateSlotNfcSerials(id));
+cloudHandle('cloud:saveWallConfiguration', (p) => cloud().saveWallConfiguration(p));
+cloudHandle('cloud:createCheckInStation', (p) => cloud().createCheckInStation(p));
+cloudHandle('cloud:validateWelcomeScreenSerial', (payload) => cloud().validateWelcomeScreenSerial(payload.serialNumber, payload.chargingWallId));
 
 app.whenReady().then(() => {
   createAppMenu();
@@ -166,3 +191,5 @@ ipcMain.handle('scanner:getVersion', (_e, payload) => scanner.getVersion(payload
 ipcMain.handle('scanner:getLastValue', () => scanner.getLastValue());
 
 ipcMain.handle('arduino:openWall', (_e, portPath, durationMs) => arduino.openWall(portPath, durationMs));
+
+ipcMain.handle('cloud:getLogPath', () => logger.logPath());

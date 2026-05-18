@@ -1,0 +1,6 @@
+v81 verification:
+- Fixes startup crash: resetDbToDefault is defined.
+- Keeps v80 retailer direct behavior.
+- getCustomers calls only: ${retailerBaseUrl}/
+- getStoresByCustomer calls only: ${retailerBaseUrl}/stores?retailerId=...
+- No /device-management/v1/retailers fallback exists.

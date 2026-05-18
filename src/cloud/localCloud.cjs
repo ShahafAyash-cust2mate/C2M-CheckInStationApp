@@ -125,7 +125,9 @@ function generateAndPersistSlotNfcSerials(db, wall, model) {
       SlotNumber: Number(s.RowNumber) * Number(model.ColumnCount) + Number(s.ColumnNumber) + 1,
       RowNumber: Number(s.RowNumber),
       ColumnNumber: Number(s.ColumnNumber),
-      NFCCode: s.NFCCode,
+      NFCTag: s.NFCTag,
+      NFCCode: s.NFCTag,
+      NFCId: s.NFCId || '',
       Status: Number(s.Status || 0)
     }));
   }
@@ -145,6 +147,8 @@ function generateAndPersistSlotNfcSerials(db, wall, model) {
       const row = {
         ChargingSlotId: nextId(db.ChargingSlots, 'ChargingSlotId'),
         ChargingWallId: wallId,
+        NFCId: '',
+        NFCTag: nfcCode,
         NFCCode: nfcCode,
         RowNumber: r,
         ColumnNumber: c,
@@ -152,7 +156,7 @@ function generateAndPersistSlotNfcSerials(db, wall, model) {
       };
 
       db.ChargingSlots.push(row);
-      generated.push({ SlotNumber: slotNumber, RowNumber: r, ColumnNumber: c, NFCCode: nfcCode, Status: 0 });
+      generated.push({ SlotNumber: slotNumber, RowNumber: r, ColumnNumber: c, NFCId: '', NFCTag: nfcCode, NFCCode: nfcCode, Status: 0 });
     }
   }
 
@@ -228,7 +232,7 @@ function isScreenCell(model, row, col) {
 function existingNfcMax(db) {
   let max = 0;
   for (const slot of validRows(db.ChargingSlots, 'ChargingSlotId')) {
-    const m = String(slot.NFCCode || '').match(/^CW00(\d{8})$/);
+    const m = String(slot.NFCTag || '').match(/^CW00(\d{8})$/);
     if (m) max = Math.max(max, Number(m[1]));
   }
   return max;
@@ -246,7 +250,9 @@ function allocateSlotNfcSerials(chargingWallId) {
       SlotNumber: Number(s.RowNumber) * Number(model.ColumnCount) + Number(s.ColumnNumber) + 1,
       RowNumber: Number(s.RowNumber),
       ColumnNumber: Number(s.ColumnNumber),
-      NFCCode: s.NFCCode,
+      NFCTag: s.NFCTag,
+      NFCCode: s.NFCTag,
+      NFCId: s.NFCId || '',
       Status: Number(s.Status || 0)
     }));
 
@@ -275,13 +281,15 @@ function saveWallConfiguration(payload) {
     );
 
     if (existing) {
-      existing.NFCCode = slot.NFCCode || existing.NFCCode;
+      existing.NFCId = slot.NFCId || existing.NFCId || '';
+      existing.NFCTag = slot.NFCTag || slot.NFCCode || existing.NFCTag || '';
       existing.Status = Number(slot.Status ?? existing.Status ?? 0);
     } else {
       db.ChargingSlots.push({
         ChargingSlotId: nextId(db.ChargingSlots, 'ChargingSlotId'),
         ChargingWallId: Number(payload.ChargingWallId),
-        NFCCode: slot.NFCCode,
+        NFCId: slot.NFCId || '',
+        NFCTag: slot.NFCTag || slot.NFCCode || '',
         RowNumber: Number(slot.RowNumber),
         ColumnNumber: Number(slot.ColumnNumber),
         Status: Number(slot.Status || 0)

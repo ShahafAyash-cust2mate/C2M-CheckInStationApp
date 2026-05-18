@@ -1144,3 +1144,61 @@ main{grid-template-rows:auto auto minmax(0,1fr)!important}
 .wallConnector::after {
   display: none !important;
 }
+.settingsSectionTitle {
+  grid-column: 1 / -1;
+  margin: 14px 0 0;
+  font-size: 18px;
+  opacity: .95;
+}
+
+/* v70 */
+.fieldHint{
+  margin-top:6px;
+  margin-bottom:10px;
+  color:#9fb3d9;
+  font-size:13px;
+  line-height:1.25;
+}
+
+
+/* v71: manual slot selection and continue from selected slot */
+.selectableSlot {
+  cursor: pointer;
+}
+
+.selectableSlot:hover .slotInner {
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, .45);
+  transform: translateY(-1px);
+}
+
+.nfcSerialRow.clickable {
+  cursor: pointer;
+}
+
+.nfcSerialRow.clickable:hover {
+  outline: 2px solid rgba(250, 204, 21, .55);
+}
+
+.continueBtn {
+  background: linear-gradient(180deg, #f59e0b, #d97706) !important;
+  color: #08111f !important;
+}
+
+
+/* v72: fatal renderer error screen instead of blank screen */
+.fatalErrorScreen {
+  min-height: 100vh;
+  padding: 32px;
+  color: #e5e7eb;
+  background: radial-gradient(circle at 10% 10%, #1e3a5f, #020617 60%);
+}
+.fatalErrorScreen h1 { color: #fca5a5; }
+.fatalErrorScreen pre {
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: rgba(15,23,42,.92);
+  border: 1px solid rgba(248,113,113,.4);
+  border-radius: 12px;
+  padding: 16px;
+}

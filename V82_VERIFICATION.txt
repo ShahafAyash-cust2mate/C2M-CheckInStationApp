@@ -1,0 +1,5 @@
+v82 verification:
+- Retailers are loaded from: ${retailerBaseUrl}/
+- Stores dropdown uses the stores array embedded in the retailer response.
+- getStoresByCustomer does not call a separate stores endpoint.
+- No fallback to device-management/v1/retailers exists.

@@ -13,7 +13,8 @@ contextBridge.exposeInMainWorld('cloudApi', {
   allocateSlotNfcSerials: (id) => ipcRenderer.invoke('cloud:allocateSlotNfcSerials', id),
   saveWallConfiguration: (p) => ipcRenderer.invoke('cloud:saveWallConfiguration', p),
   createCheckInStation: (p) => ipcRenderer.invoke('cloud:createCheckInStation', p),
-  validateWelcomeScreenSerial: (serialNumber, chargingWallId) => ipcRenderer.invoke('cloud:validateWelcomeScreenSerial', { serialNumber, chargingWallId })
+  validateWelcomeScreenSerial: (serialNumber, chargingWallId) => ipcRenderer.invoke('cloud:validateWelcomeScreenSerial', { serialNumber, chargingWallId }),
+  getLogPath: () => ipcRenderer.invoke('cloud:getLogPath')
 });
 
 

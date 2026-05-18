@@ -53,9 +53,11 @@
     {
       "ChargingSlotId": null,
       "ChargingWallId": null,
-      "NFCCode": "",
       "RowNumber": null,
-      "ColumnNumber": null
+      "ColumnNumber": null,
+      "NFCTag": "",
+      "NFCId": "",
+      "Status": 0
     }
   ],
   "ControlUnits": [

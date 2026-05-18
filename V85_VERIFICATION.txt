@@ -1,0 +1,7 @@
+v85 verification:
+- Built from v81 startup-fix base.
+- Restored the retailer API call that worked in cloud-api.log:
+  GET ${retailerBaseUrl}/
+- Store dropdown uses stores embedded in the retailer response.
+- getStoresByCustomer does not call /stores or /stores?retailerId.
+- No v84 requestRetailerRoot/no-slash fallback exists.

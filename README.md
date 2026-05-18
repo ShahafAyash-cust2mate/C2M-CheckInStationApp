@@ -990,3 +990,79 @@ Changes:
 - During full wall test, the left panel stays in test mode between cells and while each cell is running.
 - The app switches back to wall-selection mode only when the full wall test completes, fails, or is cancelled.
 - Check-in Station wall preview uses tight wall-sized units and no visible spacing between wall previews.
+
+## v68 Real Cloud Adapter
+
+This version adds an optional real cloud mode in Settings.
+
+Cloud differences handled:
+- Controller paths are under `/check-in-stations`.
+- DTOs are camelCase on the real cloud and normalized to the app's existing PascalCase UI model.
+- Device statuses are string enum values on the cloud: `unknown`, `pass`, `fail`; the app still displays and uses local numeric equivalents internally.
+- Charging slots now use `nfcId` / `nfcTag` and are saved through `PUT /check-in-stations/charging-walls/:id/slots`.
+- The app stores NFC UID to `NFCId` and the written/read sticker value to `NFCTag`.
+- OAuth client-credentials authentication was added for all real cloud requests.
+
+Settings to configure before using the real cloud:
+- Use real cloud = Enabled
+- Cloud Base URL = the API host or full `/check-in-stations` URL
+- OAuth Token URL = the `/oauth2/token` URL
+- OAuth Client ID
+- OAuth Client Secret
+
+Developer commands:
+```cmd
+npm install
+npm run dev
+```
+
+Build setup.exe from an existing unpacked build:
+```cmd
+npx electron-builder --win nsis --x64 --prepackaged release\win-unpacked --config.directories.output=release
+```
+
+
+## v69 Cloud-only mode and logging
+
+This version does not use the local cloud DB for app cloud operations.
+All `cloud:*` IPC calls use `src/cloud/remoteCloud.cjs` only.
+
+Cloud log file:
+- Development from source: `C:\code\CheckInStationSetup\logs\cloud-api.log` only if Electron userData is not available.
+- Normal Electron runtime: `%APPDATA%\c2m-checkin-station-setup\logs\cloud-api.log`.
+- You can also open it from the app menu: `File -> Open cloud log folder`.
+
+The log includes:
+- OAuth token request start/success/failure.
+- Every cloud request URL, method and request body.
+- Every cloud response status/body.
+- IPC cloud call success/failure.
+- Secrets, Basic auth and Bearer tokens are redacted.
+
+
+## v71 Continue from selected slot
+
+Changes:
+- In Configure Charging Wall, slots are manually selectable by clicking the wall preview or NFC tag list.
+- The first non-passed slot is selected automatically when loading a wall.
+- `Test current slot` runs only the selected slot.
+- `Start wall test from selected slot` starts/continues the wall test from the currently selected slot instead of always starting from slot 1.
+- After a failed wall test, a `Continue wall test from Slot X` button appears and resumes from the failed/selected slot.
+- Existing slot statuses from the cloud initialize the Pass/Failed UI.
+
+
+## v72 Find Wall renderer crash fix
+- Fixed `WallPreview` missing `onSlotClick` prop declaration that caused a renderer crash after Find wall.
+- Added safe normalization for cloud slot payloads before using `.filter()` / `.findIndex()`.
+- Added renderer error boundary so future UI errors show an error screen instead of a blank blue screen.
+- Added renderer console/crash logging into `%APPDATA%\c2m-checkin-station-setup\logs\cloud-api.log`.
+
+
+## v74 Retailer API support
+
+- Create Check-in Station now supports the Retailer Service endpoints from `ENDPOINTS 1.md`.
+- Retailer loading prefers `GET /retailers`.
+- Store loading prefers `GET /stores?retailerId={id}`.
+- Response mapping supports `retailerId/name/stores` and `storeId/name/retailerId/retailerStoreId`.
+- The app still uses the configured OAuth token for these requests.
+- If the Retailer Service is deployed on a different hostname than Device Management, configure Cloud Base URL to a gateway that can route both services, or ask cloud for the final retailer-service URL.

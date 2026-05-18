@@ -1,0 +1,8 @@
+v84 verification:
+- Retailer list tries both:
+  1. ${retailerBaseUrl}
+  2. ${retailerBaseUrl}/
+- Stores dropdown uses the stores array embedded in the retailer response.
+- getStoresByCustomer does not call /stores?retailerId=...
+- No /device-management/v1/retailers fallback exists.
+- resetDbToDefault is defined, so Electron startup should not crash.

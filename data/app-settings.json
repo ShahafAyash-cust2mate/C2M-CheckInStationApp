@@ -1,9 +1,21 @@
 {
+  "cloudBaseUrl": "https://customer1.cart.dev.do-c2m.com/device-management/v1",
+  "oauthTokenUrl": "https://auth.dev.do-c2m.com/oauth2/token",
+  "oauthClientId": "aa2d6a17-9905-467c-b03b-8d1c0d3ce1b5",
+  "oauthClientSecret": "DACKGQwrLVBBdqeXDRwBuwfjHL2IHu66uIu9RgAzogg",
+  "cloudRequestTimeoutMs": 30000,
+  "scannerKeyboardSuffix": "Enter",
+  "chargingTestTimeoutMs": 15000,
   "nfcActionTimeoutMs": 10000,
-  "chargeDetectTimeoutMs": 10000,
-  "nfcActionDelayMs": 3000,
+  "chargeDetectTimeoutMs": 15000,
+  "nfcActionDelayMs": 0,
   "nfcImmediateAction": true,
   "scannerMacFragment": "",
   "scannerReadTimeoutMs": 20000,
-  "arduinoCommandTimeoutMs": 2500
+  "arduinoCommandTimeoutMs": 2500,
+  "openWallDurationSec": 10,
+  "cloudUseRemote": true,
+  "cloudTokenUrl": "https://auth.dev.do-c2m.com/oauth2/token",
+  "cloudClientId": "aa2d6a17-9905-467c-b03b-8d1c0d3ce1b5",
+  "cloudClientSecret": "DACKGQwrLVBBdqeXDRwBuwfjHL2IHu66uIu9RgAzogg  Download v75"
 }

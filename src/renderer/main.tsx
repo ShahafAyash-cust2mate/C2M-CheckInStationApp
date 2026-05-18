@@ -54,20 +54,26 @@ function errorText(error: any) {
 
 const DEFAULT_APP_SETTINGS = {
   nfcActionTimeoutMs: 10000,
-  chargeDetectTimeoutMs: 10000,
-  nfcActionDelayMs: 3000,
+  chargeDetectTimeoutMs: 15000,
+  nfcActionDelayMs: 0,
   nfcImmediateAction: true,
   scannerMacFragment: '',
   scannerReadTimeoutMs: 20000,
   arduinoCommandTimeoutMs: 2500,
-  openWallDurationSec: 10
+  openWallDurationSec: 10,
+  cloudUseRemote: true,
+  cloudBaseUrl: 'https://customer1.cart.dev.do-c2m.com/device-management/v1',
+  cloudTokenUrl: 'https://auth.dev.do-c2m.com/oauth2/token',
+  cloudClientId: '',
+  cloudClientSecret: '',
+  cloudRequestTimeoutMs: 30000
 };
 
 const i18n = {
   en: {
     home:'Home', createWall:'Create Charging Wall', configWall:'Configure Charging Wall', createStation:'Create Check-in Station', db:'Show Check-in Stations',
     title:'Check-in Station Setup', subtitle:'', serial:'Serial Number', wallModel:'Wall model',
-    saveWall:'Save wall to local cloud', modelPreview:'Model preview', chooseModel:'Choose a model to preview the wall', welcomeScreen:'Welcome Screen', waiting:'Waiting', active:'Active', done:'Done',
+    saveWall:'Save wall to cloud', modelPreview:'Model preview', chooseModel:'Choose a model to preview the wall', welcomeScreen:'Welcome Screen', waiting:'Waiting', active:'Active', done:'Done',
     stationName:'Check-in station name', retailer:'Retailer', store:'Store', addWall:'Add wall', submit:'Submit and save', chooseWall:'Choose wall', unassignedWall:'Choose unassigned wall',
     currentSlot:'Current slot', testSlot:'Test current slot', allRetailers:'All retailers', allStores:'All stores', station:'Check-in Station', savedSlots:'Saved slots', language:'Language',
     welcomeSerial:'Welcome screen serial', noScreen:'None', fullJson:'Show full JSON', nfcSerials:'NFC serials', noNfcSerials:'No NFC serials'
@@ -89,7 +95,7 @@ function isScreenCell(model: Row, r: number, c: number) {
 }
 function isScreenStart(model: Row, r: number, c: number) { return model?.HasWelcomeScreen && r === model.WelcomeScreenRowNumber && c === model.WelcomeScreenColumnNumber; }
 function slotNumber(model: Row, r: number, c: number) { return r * model.ColumnCount + c + 1; }
-function WallPreview({ model, t, activeSlot, completedSlots = [], failedSlots = [], compact=false }: { model: Row | null; t: any; activeSlot?: number; completedSlots?: number[]; failedSlots?: number[]; compact?: boolean }) {
+function WallPreview({ model, t, activeSlot, completedSlots = [], failedSlots = [], compact=false, onSlotClick }: { model: Row | null; t: any; activeSlot?: number; completedSlots?: number[]; failedSlots?: number[]; compact?: boolean; onSlotClick?: (slotNumber: number) => void }) {
   if (!model) return <div className="emptyState">{t.chooseModel}</div>;
   const cells: React.ReactNode[] = [];
   for (let r = 0; r < model.RowCount; r++) {
@@ -101,7 +107,7 @@ function WallPreview({ model, t, activeSlot, completedSlots = [], failedSlots = 
       } else {
         const passed = completedSlots.includes(sn);
         const failed = failedSlots.includes(sn);
-        cells.push(<div key={`${r}-${c}`} className={`slotCard ${activeSlot===sn?'activeSlot blinkingSlot':''} ${passed?'doneSlot':''} ${failed?'failedSlot':''}`}>
+        cells.push(<div key={`${r}-${c}`} role={onSlotClick?'button':undefined} tabIndex={onSlotClick?0:undefined} onClick={()=>onSlotClick?.(sn)} onKeyDown={(e)=>{ if(onSlotClick && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); onSlotClick(sn); } }} className={`slotCard ${onSlotClick?'selectableSlot':''} ${activeSlot===sn?'activeSlot blinkingSlot':''} ${passed?'doneSlot':''} ${failed?'failedSlot':''}`}>
           {activeSlot===sn && <div className="slotArrow">↓</div>}
           <div className="slotInner"><strong>{sn}</strong><span>{passed?'✓':failed?'✕':activeSlot===sn?t.active:t.waiting}</span></div>
         </div>);
@@ -153,6 +159,29 @@ function ClearableTextInput({
 
 
 
+
+function modelOptionLabel(m: Row) {
+  const model = String(m?.Model || '').trim();
+  const description = String(m?.Description || '').trim();
+  return description ? `${model} - ${description}` : model;
+}
+
+function targetHasWelcomeScreenFromSerial(serial: string): boolean | null {
+  const s = String(serial || '').trim();
+  if (s.startsWith('11')) return false;
+  if (s.startsWith('12')) return true;
+  return null;
+}
+
+function bestModelForSerial(models: Row[], serial: string): Row | null {
+  const target = targetHasWelcomeScreenFromSerial(serial);
+  if (target === null) return null;
+  const matches = models.filter(m => Boolean(m?.HasWelcomeScreen) === target);
+  if (!matches.length) return null;
+  const preferredToken = target ? 'WS' : 'NS';
+  return matches.find(m => String(m?.Model || '').toUpperCase().includes(preferredToken)) || matches[0];
+}
+
 function CreateWall({ lang, appSettings }: {lang:Lang; appSettings:any}) {
   const t=i18n[lang];
   const [models,setModels]=useState<Row[]>([]);
@@ -161,6 +190,12 @@ function CreateWall({ lang, appSettings }: {lang:Lang; appSettings:any}) {
   const [modelId,setModelId]=useState('');
   const [msg,setMsg]=useState('');
   useEffect(()=>{window.cloudApi.getWallModels().then((m:Row[])=>{setModels(m); if(m[0]) setModelId(String(m[0].ChargingWallModelId));}).catch((e:any)=>setMsg(errorText(e)));},[]);
+  useEffect(()=>{
+    const autoModel = bestModelForSerial(models, serial);
+    if (autoModel) setModelId(String(autoModel.ChargingWallModelId));
+  }, [serial, models]);
+  const serialModelTarget = targetHasWelcomeScreenFromSerial(serial);
+  const visibleModels = serialModelTarget === null ? models : models.filter(m => Boolean(m?.HasWelcomeScreen) === serialModelTarget);
   const model=models.find(m=>String(m.ChargingWallModelId)===modelId)||null;
   async function submit(){
     setMsg('');
@@ -169,7 +204,7 @@ function CreateWall({ lang, appSettings }: {lang:Lang; appSettings:any}) {
       setMsg(`ChargingWallId: ${row.ChargingWallId}`); setSerial(''); setScreenSerial('');
     } catch (e:any) { setMsg(errorText(e)); }
   }
-  return <section className="pageGrid"><div className="panel formPanel"><h2>{t.createWall}</h2><label>{t.serial}</label><ClearableTextInput value={serial} onChange={setSerial} placeholder={t.serial}/><label>{t.wallModel}</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{models.map(m=><option key={m.ChargingWallModelId} value={m.ChargingWallModelId}>{m.Model} - {m.Description}</option>)}</select>{model?.HasWelcomeScreen&&<><label>{t.welcomeSerial}</label><ClearableTextInput value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial}/></>}<button onClick={submit}>{t.saveWall}</button>{msg&&<div className="notice">{msg}</div>}</div><div className="panel previewPanel"><h2>{t.modelPreview}</h2><WallPreview model={model} t={t}/></div></section>;
+  return <section className="pageGrid"><div className="panel formPanel"><h2>{t.createWall}</h2><label>{t.serial}</label><ClearableTextInput value={serial} onChange={setSerial} placeholder={t.serial}/><label>{t.wallModel}</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{visibleModels.map(m=><option key={m.ChargingWallModelId} value={m.ChargingWallModelId}>{modelOptionLabel(m)}</option>)}</select>{serialModelTarget!==null&&<div className="fieldHint">Model auto-selected by barcode prefix: {serial.trim().startsWith('11')?'11 = without welcome screen':'12 = with welcome screen'}</div>}{model?.HasWelcomeScreen&&<><label>{t.welcomeSerial}</label><ClearableTextInput value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial}/></>}<button onClick={submit}>{t.saveWall}</button>{msg&&<div className="notice">{msg}</div>}</div><div className="panel previewPanel"><h2>{t.modelPreview}</h2><WallPreview model={model} t={t}/></div></section>;
 }
 
 
@@ -247,6 +282,44 @@ function statusClass(status: any) {
   return 'statusUnknown';
 }
 
+
+function statusToNumber(status: any) {
+  if (typeof status === 'string') {
+    const s = status.trim().toLowerCase();
+    if (s === 'pass' || s === 'passed') return 1;
+    if (s === 'fail' || s === 'failed') return 2;
+    return 0;
+  }
+  const n = Number(status || 0);
+  return n === 1 || n === 2 ? n : 0;
+}
+
+function normalizeCloudSlots(payload: any): Row[] {
+  const candidate = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.slots)
+      ? payload.slots
+      : Array.isArray(payload?.Slots)
+        ? payload.Slots
+        : Array.isArray(payload?.chargingSlots)
+          ? payload.chargingSlots
+          : Array.isArray(payload?.ChargingSlots)
+            ? payload.ChargingSlots
+            : [];
+  return candidate.map((s: any, i: number) => ({
+    ...s,
+    SlotNumber: Number(s.SlotNumber ?? s.slotNumber ?? s.slot_number ?? (i + 1)),
+    ChargingSlotId: s.ChargingSlotId ?? s.chargingSlotId ?? s.id ?? s.charging_slot_id,
+    ChargingWallId: s.ChargingWallId ?? s.chargingWallId ?? s.charging_wall_id,
+    NFCId: s.NFCId ?? s.nfcId ?? s.nfc_id ?? '',
+    NFCTag: s.NFCTag ?? s.nfcTag ?? s.nfc_tag ?? s.NFCCode ?? s.nfcCode ?? '',
+    NFCCode: s.NFCTag ?? s.nfcTag ?? s.nfc_tag ?? s.NFCCode ?? s.nfcCode ?? '',
+    RowNumber: Number(s.RowNumber ?? s.rowNumber ?? s.row_number ?? 0),
+    ColumnNumber: Number(s.ColumnNumber ?? s.columnNumber ?? s.column_number ?? 0),
+    Status: statusToNumber(s.Status ?? s.status ?? 0)
+  }));
+}
+
 function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:any; appSettings:any}) {
   const t=i18n[lang];
   const [wallSerial,setWallSerial]=useState('');
@@ -265,14 +338,19 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
 
   async function findWallBySerial(){
     setMsg('');
-    setPassed([]); setFailed([]); setIdx(0); setCountdownMs(null); setWallTestMode(false);
+    setPassed([]); setFailed([]); setIdx(0); setCountdownMs(null); setWallTestMode(false); setTestInstruction(null); setTestViewActive(false);
     try {
       const wall = await window.cloudApi.getUnassignedWallBySerial(wallSerial.trim());
       setSelected(String(wall.ChargingWallId));
       const d = await window.cloudApi.getWallDetails(Number(wall.ChargingWallId));
       setDetails(d);
       setScreenSerial(d?.welcomeScreen?.SerialNumber || '');
-      setAlloc(await window.cloudApi.allocateSlotNfcSerials(Number(wall.ChargingWallId)));
+      const slots = normalizeCloudSlots(await window.cloudApi.allocateSlotNfcSerials(Number(wall.ChargingWallId)));
+      setAlloc(slots);
+      setPassed(slots.filter((s:any)=>statusToNumber(s.Status)===1).map((s:any)=>s.SlotNumber));
+      setFailed(slots.filter((s:any)=>statusToNumber(s.Status)===2).map((s:any)=>s.SlotNumber));
+      const firstNotPass = slots.findIndex((s:any)=>statusToNumber(s.Status)!==1);
+      setIdx(firstNotPass >= 0 ? firstNotPass : 0);
     } catch(e:any) {
       setSelected(''); setDetails(null); setAlloc([]);
       setMsg(errorText(e));
@@ -294,6 +372,15 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
     }
   }
 
+  function selectSlot(slotNumber: number) {
+    if (testViewActive || countdownMs !== null) return;
+    const nextIdx = alloc.findIndex((s:any) => Number(s.SlotNumber) === Number(slotNumber));
+    if (nextIdx >= 0) {
+      setIdx(nextIdx);
+      setMsg(`Selected slot ${slotNumber}. Test current slot or start wall test will begin from this slot.`);
+    }
+  }
+
   async function startCurrentSlotTest(){
     const item=alloc[idx]; if(!item) return;
     if(!verifyDevices()) return;
@@ -306,9 +393,13 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
     if(!verifyDevices()) return;
     try {
       await validateScreenIfNeeded();
-      setPassed([]); setFailed([]); setIdx(0); setWallTestMode(true); setTestViewActive(true);
-      setTestInstruction({slotNumber:alloc[0].SlotNumber});
-      setMsg(`Wall test started. Please Enter the Unit into Slot ${alloc[0].SlotNumber}`);
+      const startIndex = Math.max(0, Math.min(idx, alloc.length - 1));
+      const startSlot = alloc[startIndex];
+      setIdx(startIndex);
+      setWallTestMode(true);
+      setTestViewActive(true);
+      setTestInstruction({slotNumber:startSlot.SlotNumber});
+      setMsg(`Wall test will continue from Slot ${startSlot.SlotNumber}. Please Enter the Unit into Slot ${startSlot.SlotNumber}`);
     } catch(e:any){ setMsg(errorText(e)); }
   }
 
@@ -354,6 +445,7 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
       setMsg('Wall test completed successfully');
     }
     setTestInstruction(null);
+    setTestViewActive(false);
     setWallTestMode(false);
   }
 
@@ -363,7 +455,7 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
 
     const arduinoPort = ports.arduinoPort;
     const nfcPort = ports.nfcPort;
-    const expectedSerial = String(item.NFCCode || '').trim();
+    const expectedSerial = String(item.NFCTag || item.NFCCode || '').trim();
 
     async function finishSlot(success: boolean, message: string) {
       const slotStatus = success ? 1 : 2;
@@ -374,7 +466,7 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
         setFailed(f => Array.from(new Set([...f, item.SlotNumber])));
         setPassed(p => p.filter(x => x !== item.SlotNumber));
       }
-      const updatedAlloc = alloc.map(s => s.SlotNumber === item.SlotNumber ? { ...s, Status: slotStatus } : s);
+      const updatedAlloc = alloc.map(s => s.SlotNumber === item.SlotNumber ? { ...s, NFCId: item.NFCId || s.NFCId || '', NFCTag: item.NFCTag || item.NFCCode || s.NFCTag || s.NFCCode || '', NFCCode: item.NFCTag || item.NFCCode || s.NFCTag || s.NFCCode || '', Status: slotStatus } : s);
       setAlloc(updatedAlloc);
       try {
         await window.cloudApi.saveWallConfiguration({
@@ -443,7 +535,13 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
         return await finishSlot(false, `Slot ${item.SlotNumber} failed: NFC mismatch. Expected ${expectedSerial}, read ${actualSerial || '(empty)'}`);
       }
 
-      // NFC write+read passed -> handle LED green.
+      // NFC write+read passed -> save sticker UID and tag, then handle LED green.
+      const readUid = String(read?.uid || wrote?.uid || '').trim();
+      const readTag = actualSerial;
+      item.NFCId = readUid;
+      item.NFCTag = readTag;
+      item.NFCCode = readTag;
+      setAlloc(prev => prev.map(s => s.SlotNumber === item.SlotNumber ? { ...s, NFCId: readUid, NFCTag: readTag, NFCCode: readTag } : s));
       // Open the wall immediately after the NFC test passes.
       await safeTurnHandleLedGreen(arduinoPort);
       const openWallDurationSec = Math.max(1, Math.min(99, Number(appSettings?.openWallDurationSec ?? 10)));
@@ -464,7 +562,7 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
     if(!selected) return setMsg('Select a charging wall first');
     try {
       await validateScreenIfNeeded();
-      const wallStatus = failed.length ? 2 : (alloc.length && alloc.every((s:any)=>Number(s.Status||0)===1) ? 1 : 0);
+      const wallStatus = failed.length ? 2 : (alloc.length && alloc.every((s:any)=>statusToNumber(s.Status)===1) ? 1 : 0);
       const r=await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenSerialNumber:screenSerial.trim(),Slots:alloc,Status:wallStatus});
       setMsg(`${t.savedSlots}: ${r.SlotCount} | Wall status: ${statusLabel(r.Status)}`);
     } catch(e:any){setMsg(errorText(e));}
@@ -494,7 +592,8 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
         <div className="progress">{passed.length}/{alloc.length}</div>
         {countdownMs!==null&&<div className="countdownBox"><div>Timeout: <strong>{countdownSec}</strong>s</div><div className="timeoutBar"><span style={{width:`${countdownPct}%`}}></span></div></div>}
         <button onClick={startCurrentSlotTest} disabled={!currentItem}>{t.testSlot}</button>
-        <button onClick={startWallTest} disabled={!alloc.length}>Start wall test</button>
+        <button onClick={startWallTest} disabled={!alloc.length}>Start wall test from selected slot</button>
+        {(failed.length>0 || msg.includes('stopped')) && <button className="continueBtn" onClick={startWallTest} disabled={!alloc.length}>Continue wall test from Slot {currentItem?.SlotNumber || ''}</button>}
         <button className="secondary" onClick={save} disabled={!alloc.length||passed.length!==alloc.length}>{t.submit}</button>
         {msg&&<div className="notice">{msg}</div>}
       </>}
@@ -503,13 +602,13 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
       <h2>{t.configWall}</h2>
       <p>{currentItem?`${t.currentSlot}: ${currentItem.SlotNumber}`:''}</p>
       <div className="wallWithSerials">
-        <WallPreview model={details?.model||null} t={t} activeSlot={currentItem?.SlotNumber} completedSlots={passed} failedSlots={failed}/>
+        <WallPreview model={details?.model||null} t={t} activeSlot={currentItem?.SlotNumber} completedSlots={passed} failedSlots={failed} onSlotClick={selectSlot}/>
         <div className="nfcSerialList">
           <h3>{t.nfcSerials}</h3>
           {alloc.length ? alloc.map(item => (
-            <div key={`${item.RowNumber}-${item.ColumnNumber}`} className={`nfcSerialRow ${currentItem?.SlotNumber===item.SlotNumber?'active':''} ${passed.includes(item.SlotNumber)?'passed':''} ${failed.includes(item.SlotNumber)?'failed':''}`}>
+            <div key={`${item.RowNumber}-${item.ColumnNumber}`} onClick={()=>selectSlot(item.SlotNumber)} className={`nfcSerialRow clickable ${currentItem?.SlotNumber===item.SlotNumber?'active':''} ${passed.includes(item.SlotNumber)?'passed':''} ${failed.includes(item.SlotNumber)?'failed':''}`}>
               <strong>Slot {item.SlotNumber}</strong>
-              <span>{item.NFCCode}</span>
+              <span>{(item.NFCTag || item.NFCCode)}</span>
               <em className={`slotStatus ${statusClass(item.Status)}`}>{statusLabel(item.Status)}</em>
             </div>
           )) : <div className="emptyState small">{t.noNfcSerials}</div>}
@@ -1169,7 +1268,7 @@ function SettingsWindow({ lang }: {lang:Lang}) {
 
   return <main className="settingsWindow" dir={lang==='he'?'rtl':'ltr'}>
     <div className="panel settingsPanel">
-      <h2>Settings</h2>
+      <h2>Settings</h2><div className="notice">Build version: v85 restore working retailer + embedded stores</div>
       <div className="settingsGrid">
         <label>NFC / cell test timeout (ms)</label>
         <input type="number" value={settings.nfcActionTimeoutMs} onChange={e=>update('nfcActionTimeoutMs', Number(e.target.value))}/>
@@ -1193,6 +1292,20 @@ function SettingsWindow({ lang }: {lang:Lang}) {
           <option value="enter">Enter</option>
           <option value="tab">Tab</option>
         </select>
+        <h3 className="settingsSectionTitle">Cloud connection</h3>
+        <div></div>
+        <label>Cloud mode</label>
+        <div className="notice">Real cloud only. Local DB fallback is disabled.</div>
+        <label>Cloud Base URL</label>
+        <input value={settings.cloudBaseUrl || ''} onChange={e=>update('cloudBaseUrl', e.target.value)} placeholder="https://... or https://.../check-in-stations"/>
+        <label>Retailer Base URL</label><input value={settings.retailerBaseUrl||''} onChange={e=>setSettings({...settings, retailerBaseUrl:e.target.value})}/><label>OAuth Token URL</label>
+        <input value={settings.cloudTokenUrl || ''} onChange={e=>update('cloudTokenUrl', e.target.value)} placeholder="https://.../oauth2/token"/>
+        <label>OAuth Client ID</label>
+        <input value={settings.cloudClientId || ''} onChange={e=>update('cloudClientId', e.target.value)} />
+        <label>OAuth Client Secret</label>
+        <input type="password" value={settings.cloudClientSecret || ''} onChange={e=>update('cloudClientSecret', e.target.value)} />
+        <label>Cloud request timeout (ms)</label>
+        <input type="number" value={settings.cloudRequestTimeoutMs || 30000} onChange={e=>update('cloudRequestTimeoutMs', Number(e.target.value))}/>
       </div>
       <div className="row settingsActions">
         <button onClick={save}>Save settings</button>
@@ -1246,6 +1359,36 @@ function ScannerKeyboardBridge({ appSettings }: { appSettings: any }) {
 
   return <div className="scannerKeyboardBridge" title="Last scanner keyboard value">{lastValue ? `Scanner: ${lastValue}` : ''}</div>;
 }
+
+
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {error: any}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: any) { return { error }; }
+  componentDidCatch(error: any, info: any) {
+    try { console.error('Renderer ErrorBoundary crash', error, info); } catch {}
+  }
+  render() {
+    if (this.state.error) {
+      return <main className="fatalErrorScreen">
+        <h1>Application UI error</h1>
+        <p>The app caught a renderer error instead of showing a blank screen.</p>
+        <pre>{String(this.state.error?.stack || this.state.error?.message || this.state.error)}</pre>
+        <p>Open File → Open cloud log folder and send the log file.</p>
+      </main>;
+    }
+    return this.props.children;
+  }
+}
+
+window.addEventListener('error', (event) => {
+  try { console.error('Renderer window error', event.error || event.message); } catch {}
+});
+window.addEventListener('unhandledrejection', (event) => {
+  try { console.error('Renderer unhandled rejection', event.reason); } catch {}
+});
 
 function App(){
   const saved = loadDeviceState();
@@ -1371,4 +1514,4 @@ function App(){
   </main>;
 }
 
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById('root')!).render(<ErrorBoundary><App/></ErrorBoundary>);
