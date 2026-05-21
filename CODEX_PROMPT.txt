@@ -1,0 +1,8 @@
+Read AGENTS.md, PROJECT_CONTEXT.md and OPEN_TASKS.md before changing the project.
+
+Requirements:
+- 1920x1080 target
+- Compact UI
+- Minimal whitespace
+- No unnecessary scrolling
+- Equal panel heights

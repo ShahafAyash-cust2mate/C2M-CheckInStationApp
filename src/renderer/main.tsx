@@ -51,6 +51,17 @@ function errorText(error: any) {
   return error?.message || String(error || 'Unknown error');
 }
 
+function noticeClass(message: string) {
+  const text = String(message || '').toLowerCase();
+  if (/error|failed|cannot|not found|invalid|missing|timeout|exception|err\b|שגיאה|נכשל/.test(text)) {
+    return 'notice errorNotice';
+  }
+  if (/required|warning|warn|please|must|should|empty|select|enter|scan|חובה|אזהרה|נדרש/.test(text)) {
+    return 'notice warningNotice';
+  }
+  return 'notice successNotice';
+}
+
 
 const DEFAULT_APP_SETTINGS = {
   nfcActionTimeoutMs: 10000,
@@ -114,28 +125,27 @@ function WallPreview({ model, t, activeSlot, completedSlots = [], failedSlots = 
       }
     }
   }
-  return <div className={`wallCanvas ${compact?'compactWall':''}`} dir="ltr" style={{gridTemplateColumns:`repeat(${model.ColumnCount}, ${compact?44:74}px)`, gridTemplateRows:`repeat(${model.RowCount}, ${compact?78:118}px)`}}>{cells}</div>;
+  return <div className={`wallPreviewWithBase ${compact?'compactPreview':''}`}><div className={`wallCanvas ${compact?'compactWall':''}`} dir="ltr" style={{gridTemplateColumns:`repeat(${model.ColumnCount}, ${compact?44:74}px)`, gridTemplateRows:`repeat(${model.RowCount}, ${compact?78:118}px)`}}>{cells}</div><div className="wallBaseStrip"></div></div>;
 }
 
-function Header({ lang, setLang, t, nfcStatus, arduinoStatus, scannerStatus, onDetectNfc, onDetectArduino, onDetectScanner }: any) {
-  return <header className="topHeader">
-    <div className="headerLeft"><Logo/><div><h1>{t.title}</h1></div></div>
-    <div className="headerRight">
-      <button type="button" className={`deviceIndicator ${nfcStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectNfc} title="Run NFC auto-detect"><span className="deviceDot"></span><div><strong>NFC</strong><small>{nfcStatus?.connected ? `Connected (${nfcStatus.portPath})` : 'Disconnected'}</small></div></button>
-      <button type="button" className={`deviceIndicator ${arduinoStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectArduino} title="Run Arduino auto-detect"><span className="deviceDot"></span><div><strong>Arduino</strong><small>{arduinoStatus?.connected ? `Connected (${arduinoStatus.portPath})` : 'Disconnected'}</small></div></button>
-      <button type="button" className={`deviceIndicator ${scannerStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectScanner} title="Run scanner connection test">
-        <span className="deviceDot"></span>
-        <div>
-          <strong>Scanner</strong>
-          <small>{scannerStatus?.connected ? `Connected (${scannerStatus.mac || 'BLE'})` : 'Disconnected'}</small>
-        </div>
-      </button>
-      <label className="languageSwitch">{t.language}<select value={lang} onChange={e=>setLang(e.target.value)}><option value="en">English</option><option value="he">עברית</option></select></label>
+function Header({ lightMode, setLightMode, lang, setLang, t, nfcStatus, arduinoStatus, scannerStatus, onDetectNfc, onDetectArduino, onDetectScanner }: any) {
+  return <header className="wireTopHeader">
+    <div className="wireBrand">
+      <Logo/>
+      <div className="wireDivider"></div>
+      <h1>{t.title}</h1>
+    </div>
+    <div className="wireHeaderControls">
+      <button type="button" className={`wireDevice ${nfcStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectNfc}><span></span><strong>NFC</strong><small>{nfcStatus?.connected ? 'Connected' : 'Disconnected'}</small></button>
+      <button type="button" className={`wireDevice ${scannerStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectScanner}><span></span><strong>Scanner</strong><small>{scannerStatus?.connected ? 'Connected' : 'Disconnected'}</small></button>
+      <button type="button" className={`wireDevice ${arduinoStatus?.connected ? 'connected' : 'disconnected'}`} onClick={onDetectArduino}><span></span><strong>Arduino</strong><small>{arduinoStatus?.connected ? 'Connected' : 'Disconnected'}</small></button>
+      <button className="modeSwitch" type="button" onClick={()=>setLightMode((v:boolean)=>!v)}>{lightMode ? 'Dark' : 'Light'}</button>
+      <label className="languageSwitch wireLang"><select value={lang} onChange={e=>setLang(e.target.value)}><option value="en">English</option><option value="he">עברית</option></select></label>
     </div>
   </header>;
 }
 function Tabs({ tab, setTab, t }: any) {
-  const tabs = [['home', t.home], ['createWall', t.createWall], ['configWall', t.configWall], ['createStation', t.createStation], ['db', t.db]];
+  const tabs = [['home', t.home], ['setupWall', 'Set up new wall'], ['editWall', 'Edit existing wall'], ['createStation', t.createStation], ['db', t.db]];
   return <nav className="tabs">{tabs.map(([k,l])=><button key={k} className={tab===k?'active':''} onClick={()=>setTab(k)}>{l}</button>)}</nav>;
 }
 
@@ -144,15 +154,46 @@ function ClearableTextInput({
   value,
   onChange,
   placeholder,
+  inputRef,
+  autoFocus,
+  onEnter,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  autoFocus?: boolean;
+  onEnter?: () => void;
 }) {
+  function refocus() {
+    setTimeout(() => {
+      inputRef?.current?.focus();
+      inputRef?.current?.select();
+    }, 0);
+  }
+
   return (
     <div className="clearableInputWrap">
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
-      <button type="button" className="clearInputBtn" onClick={() => onChange('')} aria-label={`Clear ${placeholder}`} title="Clear">×</button>
+      <input
+        ref={inputRef}
+        autoFocus={autoFocus}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onEnter) {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        className="clearInputBtn"
+        onClick={() => { onChange(''); refocus(); }}
+        aria-label={`Clear ${placeholder}`}
+        title="Clear"
+      >×</button>
     </div>
   );
 }
@@ -182,31 +223,115 @@ function bestModelForSerial(models: Row[], serial: string): Row | null {
   return matches.find(m => String(m?.Model || '').toUpperCase().includes(preferredToken)) || matches[0];
 }
 
-function CreateWall({ lang, appSettings }: {lang:Lang; appSettings:any}) {
+
+function WallCreateForm({
+  lang,
+  onCreated,
+  onCancel,
+}: {
+  lang: Lang;
+  onCreated?: (row: Row, serial: string) => void;
+  onCancel?: () => void;
+}) {
   const t=i18n[lang];
+  const serialRef = useRef<HTMLInputElement>(null);
+  const screenRef = useRef<HTMLInputElement>(null);
   const [models,setModels]=useState<Row[]>([]);
   const [serial,setSerial]=useState('');
   const [screenSerial,setScreenSerial]=useState('');
   const [modelId,setModelId]=useState('');
   const [msg,setMsg]=useState('');
-  useEffect(()=>{window.cloudApi.getWallModels().then((m:Row[])=>{setModels(m); if(m[0]) setModelId(String(m[0].ChargingWallModelId));}).catch((e:any)=>setMsg(errorText(e)));},[]);
+
+  useEffect(()=>{setTimeout(()=>serialRef.current?.focus(),0);},[]);
+  useEffect(()=>{
+    window.cloudApi.getWallModels()
+      .then((m:Row[])=>{setModels(m); if(m[0]) setModelId(String(m[0].ChargingWallModelId));})
+      .catch((e:any)=>setMsg(errorText(e)));
+  },[]);
   useEffect(()=>{
     const autoModel = bestModelForSerial(models, serial);
-    if (autoModel) setModelId(String(autoModel.ChargingWallModelId));
+    if (autoModel) {
+      setModelId(String(autoModel.ChargingWallModelId));
+      if (Boolean(autoModel.HasWelcomeScreen)) setTimeout(()=>screenRef.current?.focus(),0);
+    }
   }, [serial, models]);
+
   const serialModelTarget = targetHasWelcomeScreenFromSerial(serial);
   const visibleModels = serialModelTarget === null ? models : models.filter(m => Boolean(m?.HasWelcomeScreen) === serialModelTarget);
   const model=models.find(m=>String(m.ChargingWallModelId)===modelId)||null;
+
   async function submit(){
     setMsg('');
     try {
-      const row=await window.cloudApi.createWall({SerialNumber:serial.trim(),ChargingWallModelId:Number(modelId),WelcomeScreenSerialNumber:screenSerial.trim()||null});
-      setMsg(`ChargingWallId: ${row.ChargingWallId}`); setSerial(''); setScreenSerial('');
-    } catch (e:any) { setMsg(errorText(e)); }
+      if (!serial.trim()) throw new Error('Scan charging wall serial first');
+      if (!modelId) throw new Error('Choose wall model');
+      if (model?.HasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen serial is required');
+      const row=await window.cloudApi.createWall({
+        SerialNumber:serial.trim(),
+        ChargingWallModelId:Number(modelId),
+        WelcomeScreenSerialNumber:screenSerial.trim()||null
+      });
+      setMsg(`ChargingWallId: ${row.ChargingWallId}`);
+      onCreated?.(row, serial.trim());
+    } catch (e:any) {
+      setMsg(errorText(e));
+      setTimeout(()=>serialRef.current?.focus(),0);
+    }
   }
-  return <section className="pageGrid"><div className="panel formPanel"><h2>{t.createWall}</h2><label>{t.serial}</label><ClearableTextInput value={serial} onChange={setSerial} placeholder={t.serial}/><label>{t.wallModel}</label><select value={modelId} onChange={e=>setModelId(e.target.value)}>{visibleModels.map(m=><option key={m.ChargingWallModelId} value={m.ChargingWallModelId}>{modelOptionLabel(m)}</option>)}</select>{serialModelTarget!==null&&<div className="fieldHint">Model auto-selected by barcode prefix: {serial.trim().startsWith('11')?'11 = without welcome screen':'12 = with welcome screen'}</div>}{model?.HasWelcomeScreen&&<><label>{t.welcomeSerial}</label><ClearableTextInput value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial}/></>}<button onClick={submit}>{t.saveWall}</button>{msg&&<div className="notice">{msg}</div>}</div><div className="panel previewPanel"><h2>{t.modelPreview}</h2><WallPreview model={model} t={t}/></div></section>;
+
+  return <section className="pageGrid">
+    <div className="panel formPanel">
+      <h2>Set up new wall</h2>
+<label>{t.serial}</label>
+      <ClearableTextInput inputRef={serialRef} autoFocus value={serial} onChange={setSerial} placeholder={t.serial} onEnter={()=>model?.HasWelcomeScreen ? screenRef.current?.focus() : submit()}/>
+      <label>{t.wallModel}</label>
+      <div className="readonlyField">{model ? modelOptionLabel(model) : 'Scan wall serial to auto-detect model'}</div>
+      {serialModelTarget!==null&&<div className="fieldHint">Model auto-selected by barcode prefix: {serial.trim().startsWith('11')?'11 = without welcome screen':'12 = with welcome screen'}</div>}
+      {model?.HasWelcomeScreen&&<>
+        <label>{t.welcomeSerial}</label>
+        <ClearableTextInput inputRef={screenRef} value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial} onEnter={submit}/>
+      </>}
+      <button className="primary fullWidthAction" onClick={submit}>Save wall to cloud</button>
+      {msg&&<div className={noticeClass(msg)}>{msg}</div>}
+      <div className="panelBottom"><BackHomeButton onClick={()=>onCancel?.()}/></div>
+    </div>
+    <div className="panel previewPanel modelPreviewPanel">
+      <h2>{t.modelPreview}</h2>
+      <div className="modelPreviewList">
+        {(visibleModels.length ? visibleModels : models).length ? (visibleModels.length ? visibleModels : models).map((m:Row)=><div key={m.ChargingWallModelId || m.Model} className={`modelPreviewCard ${String(m.ChargingWallModelId)===String(modelId)?'selected':''}`}>
+          <h3>{modelOptionLabel(m)}</h3>
+          <WallPreview model={m} t={t}/>
+        </div>) : <div className="emptyState">No wall models loaded</div>}
+      </div>
+    </div>
+  </section>;
 }
 
+function GuidedWallSetup({ lang, deviceState, appSettings, onFinish }: {lang:Lang; deviceState:any; appSettings:any; onFinish:()=>void}) {
+  const [phase,setPhase]=useState<'create'|'configure'>('create');
+  const [serial,setSerial]=useState('');
+  if (phase === 'create') {
+    return <WallCreateForm
+      lang={lang}
+      onCancel={onFinish}
+      onCreated={(_, createdSerial)=>{setSerial(createdSerial);}}
+    />;
+  }
+  return <ConfigWall
+    lang={lang}
+    deviceState={deviceState}
+    appSettings={appSettings}
+    initialSerial={serial}
+    autoFind={true}
+    guidedTitle="Set up new wall"
+    onBack={()=>setPhase('create')}
+    onFinish={onFinish}
+  />;
+}
+
+function CreateWall({ lang, appSettings }: {lang:Lang; appSettings:any}) {
+  return <WallCreateForm lang={lang}/>;
+}
 
 
 
@@ -320,9 +445,10 @@ function normalizeCloudSlots(payload: any): Row[] {
   }));
 }
 
-function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:any; appSettings:any}) {
+function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind=false, guidedTitle, onBack, onFinish }: {lang:Lang; deviceState:any; appSettings:any; initialSerial?:string; autoFind?:boolean; guidedTitle?:string; onBack?:()=>void; onFinish?:()=>void}) {
   const t=i18n[lang];
-  const [wallSerial,setWallSerial]=useState('');
+  const wallSerialRef = useRef<HTMLInputElement>(null);
+  const [wallSerial,setWallSerial]=useState(initialSerial || '');
   const [selected,setSelected]=useState('');
   const [details,setDetails]=useState<any>(null);
   const [screenSerial,setScreenSerial]=useState('');
@@ -335,12 +461,23 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
   const [slotPrompt,setSlotPrompt]=useState<{slotNumber:number}|null>(null); const [testInstruction,setTestInstruction]=useState<{slotNumber:number}|null>(null); const [testViewActive,setTestViewActive]=useState(false);
   const [wallTestMode,setWallTestMode]=useState(false);
   const currentItem = alloc[idx];
+  const lastAutoFindRef = useRef('');
 
-  async function findWallBySerial(){
+  useEffect(()=>{ setTimeout(()=>wallSerialRef.current?.focus(),0); },[]);
+  useEffect(()=>{ if(autoFind && initialSerial) findWallBySerial(initialSerial); },[autoFind, initialSerial]);
+  useEffect(()=>{
+    const s = wallSerial.trim();
+    if (!s || s.length < 6 || testViewActive || s === lastAutoFindRef.current) return;
+    const timer = setTimeout(()=>{ lastAutoFindRef.current = s; findWallBySerial(s); }, 350);
+    return ()=>clearTimeout(timer);
+  }, [wallSerial, testViewActive]);
+
+  async function findWallBySerial(serialOverride?: string){
+    const searchSerial = String(serialOverride ?? wallSerial).trim();
     setMsg('');
     setPassed([]); setFailed([]); setIdx(0); setCountdownMs(null); setWallTestMode(false); setTestInstruction(null); setTestViewActive(false);
     try {
-      const wall = await window.cloudApi.getUnassignedWallBySerial(wallSerial.trim());
+      const wall = await window.cloudApi.getUnassignedWallBySerial(searchSerial);
       setSelected(String(wall.ChargingWallId));
       const d = await window.cloudApi.getWallDetails(Number(wall.ChargingWallId));
       setDetails(d);
@@ -583,28 +720,32 @@ function ConfigWall({ lang, deviceState, appSettings }: {lang:Lang; deviceState:
           <p>Testing slot <strong>{currentItem?.SlotNumber}</strong>. Keep the unit in the slot.</p>
           {countdownMs!==null&&<div className="countdownBox"><div>Timeout: <strong>{countdownSec}</strong>s</div><div className="timeoutBar"><span style={{width:`${countdownPct}%`}}></span></div></div>}
         </>}
-        {msg&&<div className="notice">{msg}</div>}
+        {msg&&<div className={noticeClass(msg)}>{msg}</div>}
+        <div className="panelBottom"><BackHomeButton onClick={()=>onFinish?.()}/></div>
       </> : <>
-        <h2>{t.configWall}</h2>
+        <h2>{guidedTitle || t.configWall}</h2>
         <label>Charging wall serial</label>
-        <div className="row serialFindRow"><ClearableTextInput value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial"/><button onClick={findWallBySerial}>Find wall</button></div>
+        <div className="row serialFindRow"><ClearableTextInput inputRef={wallSerialRef} autoFocus value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial" onEnter={()=>findWallBySerial()}/></div>
         {details?.model?.HasWelcomeScreen&&<><label>{t.welcomeSerial}</label><ClearableTextInput value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial}/></>}
         <div className="progress">{passed.length}/{alloc.length}</div>
         {countdownMs!==null&&<div className="countdownBox"><div>Timeout: <strong>{countdownSec}</strong>s</div><div className="timeoutBar"><span style={{width:`${countdownPct}%`}}></span></div></div>}
-        <button onClick={startCurrentSlotTest} disabled={!currentItem}>{t.testSlot}</button>
-        <button onClick={startWallTest} disabled={!alloc.length}>Start wall test from selected slot</button>
-        {(failed.length>0 || msg.includes('stopped')) && <button className="continueBtn" onClick={startWallTest} disabled={!alloc.length}>Continue wall test from Slot {currentItem?.SlotNumber || ''}</button>}
-        <button className="secondary" onClick={save} disabled={!alloc.length||passed.length!==alloc.length}>{t.submit}</button>
-        {msg&&<div className="notice">{msg}</div>}
+        {alloc.length>0&&<>
+          <button onClick={startWallTest}>Start wall test from selected slot</button>
+          {(failed.length>0 || msg.includes('stopped')) && <button className="continueBtn" onClick={startWallTest}>Continue wall test from Slot {currentItem?.SlotNumber || ''}</button>}
+          <div className="workflowActions compactActions">{onBack&&<button className="secondary" onClick={onBack}>Back</button>}</div>
+        </>}
+        {msg&&<div className={noticeClass(msg)}>{msg}</div>}
+        <div className="panelBottom"><BackHomeButton onClick={()=>onFinish?.()}/></div>
       </>}
     </div>
     <div className="panel previewPanel">
       <h2>{t.configWall}</h2>
       <p>{currentItem?`${t.currentSlot}: ${currentItem.SlotNumber}`:''}</p>
+      {alloc.length>0&&<div className="rightPanelActions"><button onClick={startCurrentSlotTest} disabled={!currentItem}>Test current slot</button></div>}
       <div className="wallWithSerials">
         <WallPreview model={details?.model||null} t={t} activeSlot={currentItem?.SlotNumber} completedSlots={passed} failedSlots={failed} onSlotClick={selectSlot}/>
         <div className="nfcSerialList">
-          <h3>{t.nfcSerials}</h3>
+          <h3>Slots Info</h3>
           {alloc.length ? alloc.map(item => (
             <div key={`${item.RowNumber}-${item.ColumnNumber}`} onClick={()=>selectSlot(item.SlotNumber)} className={`nfcSerialRow clickable ${currentItem?.SlotNumber===item.SlotNumber?'active':''} ${passed.includes(item.SlotNumber)?'passed':''} ${failed.includes(item.SlotNumber)?'failed':''}`}>
               <strong>Slot {item.SlotNumber}</strong>
@@ -639,12 +780,14 @@ function StationWallsVisual({ walls, t }: { walls: Row[]; t: any }) {
   </div>;
 }
 
-function CreateStation({ lang, appSettings }: {lang:Lang; appSettings?: any}) {
+function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?: any; onFinish?:()=>void}) {
   const t=i18n[lang];
   const [customers,setCustomers]=useState<Row[]>([]); const [customerId,setCustomerId]=useState(''); const [stores,setStores]=useState<Row[]>([]); const [storeId,setStoreId]=useState('');
-  const [name,setName]=useState(''); const [wallSerial,setWallSerial]=useState(''); const [currentWall,setCurrentWall]=useState<Row|null>(null); const [selectedWalls,setSelectedWalls]=useState<Row[]>([]); const [msg,setMsg]=useState('');
-  useEffect(()=>{window.cloudApi.getCustomers().then(setCustomers).catch((e:any)=>setMsg(errorText(e)));},[]);
-  useEffect(()=>{if(customerId) window.cloudApi.getStoresByCustomer(customerId).then(setStores).catch((e:any)=>setMsg(errorText(e))); else setStores([]);},[customerId]);
+  const nameRef = useRef<HTMLInputElement>(null); const wallSerialRef = useRef<HTMLInputElement>(null);
+  const [name,setName]=useState(''); const [wallSerial,setWallSerial]=useState(''); const [currentWall,setCurrentWall]=useState<Row|null>(null); const [selectedWalls,setSelectedWalls]=useState<Row[]>([]); const [msg,setMsg]=useState(''); const stationAutoFindRef = useRef('');
+  useEffect(()=>{setTimeout(()=>nameRef.current?.focus(),0); window.cloudApi.getCustomers().then(setCustomers).catch((e:any)=>setMsg(errorText(e)));},[]);
+  useEffect(()=>{if(customerId){ const c=customers.find((x:any)=>String(x.CustomerId)===String(customerId)); setStores(Array.isArray(c?.Stores)?c.Stores:[]); } else setStores([]);},[customerId, customers]);
+  useEffect(()=>{ const s=wallSerial.trim(); if(!s || s.length < 6 || s===stationAutoFindRef.current) return; const timer=setTimeout(()=>{ stationAutoFindRef.current=s; findWall(); },350); return ()=>clearTimeout(timer); },[wallSerial]);
   async function findWall(){
     setMsg(''); setCurrentWall(null);
     try{
@@ -662,19 +805,19 @@ function CreateStation({ lang, appSettings }: {lang:Lang; appSettings?: any}) {
       if(currentWall.ModelInfo?.HasWelcomeScreen && !serial) throw new Error('Welcome screen serial is missing in local cloud for this wall');
       if(serial && selectedWalls.some(w=>String(w.WelcomeScreenSerial||'').trim().toUpperCase()===serial.toUpperCase())) throw new Error(`Welcome screen serial was already added: ${serial}`);
       setSelectedWalls(p=>[...p,{...currentWall,WelcomeScreenSerial:serial}]);
-      setWallSerial(''); setCurrentWall(null);
+      setWallSerial(''); setCurrentWall(null); setTimeout(()=>wallSerialRef.current?.focus(),0);
     } catch(e:any){setMsg(errorText(e));}
   }
   async function submit(){
     setMsg('');
-    try { const r=await window.cloudApi.createCheckInStation({Name:name,StoreId:Number(storeId),Walls:selectedWalls.map(w=>({ChargingWallId:w.ChargingWallId,WelcomeScreenSerial:w.WelcomeScreenSerial||''}))}); setMsg(`${t.station} #${r.CheckInStationId}`); setSelectedWalls([]); setName(''); }
+    try { const r=await window.cloudApi.createCheckInStation({Name:name,StoreId:Number(storeId),Walls:selectedWalls.map(w=>({ChargingWallId:w.ChargingWallId,WelcomeScreenSerial:w.WelcomeScreenSerial||''}))}); setMsg(`${t.station} #${r.CheckInStationId}`); setSelectedWalls([]); setName(''); onFinish?.(); }
     catch(e:any){setMsg(errorText(e));}
   }
   return <section className="pageGrid horizontalPage">
     <div className="panel formPanel">
-      <h2>{t.createStation}</h2>
+      <h2>Set up Check-in Station</h2>
       <label>{t.stationName}</label>
-      <ClearableTextInput value={name} onChange={setName} placeholder={t.stationName}/>
+      <ClearableTextInput inputRef={nameRef} autoFocus value={name} onChange={setName} placeholder={t.stationName}/>
       <label>{t.retailer}</label>
       <select value={customerId} onChange={e=>setCustomerId(e.target.value)}>
         <option value="">{t.allRetailers}</option>
@@ -686,7 +829,7 @@ function CreateStation({ lang, appSettings }: {lang:Lang; appSettings?: any}) {
         {stores.map(s=><option key={s.StoreId} value={s.StoreId}>{s.StoreName||s.Name||`Store ${s.StoreId}`}</option>)}
       </select>
       <label>Charging wall serial</label>
-      <div className="row serialFindRow"><ClearableTextInput value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial"/><button onClick={findWall}>Find wall</button></div>
+      <ClearableTextInput inputRef={wallSerialRef} value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial" onEnter={findWall}/>
       {currentWall&&<div className="miniCard foundWallCard">
         <strong>{currentWall.SerialNumber}</strong>
         <span>{currentWall.ModelInfo?.Model}</span>
@@ -695,7 +838,8 @@ function CreateStation({ lang, appSettings }: {lang:Lang; appSettings?: any}) {
       </div>}
       <button onClick={addWall} disabled={!currentWall}>{t.addWall}</button>
       <button className="secondary" onClick={submit} disabled={!storeId||!selectedWalls.length}>{t.submit}</button>
-      {msg&&<div className="notice">{msg}</div>}
+      {msg&&<div className={noticeClass(msg)}>{msg}</div>}
+      <div className="panelBottom"><BackHomeButton onClick={()=>onFinish?.()}/></div>
     </div>
     <div className="panel previewPanel">
       <h2>{t.createStation}</h2>
@@ -704,38 +848,162 @@ function CreateStation({ lang, appSettings }: {lang:Lang; appSettings?: any}) {
   </section>;
 }
 
-function DbViewer({ lang }: {lang:Lang}) {
-  const t=i18n[lang]; const [db,setDb]=useState<any>(null); const [customer,setCustomer]=useState(''); const [store,setStore]=useState(''); const [showJson,setShowJson]=useState(false);
-  async function load(){setDb(await window.cloudApi.getDb())}
-  useEffect(()=>{load()},[]);
-  if(!db) return <section className="panel"><h2>Loading...</h2></section>;
-  const stations=(db.CheckInStations||[]).filter((s:Row)=>(!store||String(s.StoreId)===store));
-  return <section className="panel dbPanel">
-    <div className="toolbar"><h2>{t.db}</h2><button onClick={load}>Refresh</button></div>
-    <div className="filters">
-      <select value={customer} onChange={e=>{setCustomer(e.target.value);setStore('')}}><option value="">{t.allRetailers}</option>{(db.Customers||[]).filter((c:Row)=>c.CustomerId).map((c:Row)=><option key={c.CustomerId} value={c.CustomerId}>{c.CustomerName||c.Name||`Customer ${c.CustomerId}`}</option>)}</select>
-      <select value={store} onChange={e=>setStore(e.target.value)}><option value="">{t.allStores}</option>{(db.Stores||[]).filter((s:Row)=>s.StoreId&&(!customer||String(s.CustomerId)===customer)).map((s:Row)=><option key={s.StoreId} value={s.StoreId}>{s.StoreName||s.Name||`Store ${s.StoreId}`}</option>)}</select>
+function TestSpecificSlot({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
+  const t = i18n[lang];
+  const slotRef = useRef<HTMLInputElement>(null);
+  const [nfcWriteText, setNfcWriteText] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState<number>(1);
+  const [msg, setMsg] = useState('');
+
+  useEffect(()=>{ setTimeout(()=>slotRef.current?.focus(),0); },[]);
+
+  function chooseSlot(slotNumber: number) {
+    setSelectedSlot(slotNumber);
+    setMsg(`Selected slot ${slotNumber}`);
+  }
+
+  function onSlotInput(value: string) {
+    const num = Number(value);
+    if (Number.isFinite(num) && num >= 1 && num <= 99) setSelectedSlot(num);
+  }
+
+  function action(name: string) {
+    if (!selectedSlot) {
+      setMsg('Select a slot first');
+      return;
+    }
+    setMsg(`${name} requested for slot ${selectedSlot}${name==='Write NFC' && nfcWriteText ? ` with value: ${nfcWriteText}` : ''}`);
+  }
+
+  return <section className="pageGrid horizontalPage testSpecificSlotPage">
+    <div className="panel formPanel">
+      <h2>Test specific slot</h2>
+      <label>Slot number</label>
+      <ClearableTextInput inputRef={slotRef} value={String(selectedSlot || '')} onChange={onSlotInput} placeholder="Enter slot number" />
+      <div className="selectedSlotBox">Selected Slot: <strong>{selectedSlot || '-'}</strong></div>
+      {msg&&<div className={noticeClass(msg)}>{msg}</div>}
+      <div className="panelBottom"><BackHomeButton onClick={onFinish}/></div>
     </div>
-    {stations.map((s:Row)=>{
-      const stationWalls=(db.ChargingWalls||[])
-        .filter((w:Row)=>Number(w.CheckInStationId)===Number(s.CheckInStationId))
-        .sort((a:Row,b:Row)=>Number(a.ChargingWallIndex)-Number(b.ChargingWallIndex))
-        .map((w:Row)=>({
-          ...w,
-          ModelInfo:(db.ChargingWallModels||[]).find((m:Row)=>Number(m.ChargingWallModelId)===Number(w.ChargingWallModelId))||null,
-          WelcomeScreenSerial:((db.WelcomeScreens||[]).find((ws:Row)=>Number(ws.ChargingWallId)===Number(w.ChargingWallId))||{}).SerialNumber||'',
-          Status:Number(w.Status||0)
-        }));
-      return <div key={s.CheckInStationId} className="stationCard">
-        <h3>{s.Name||`${t.station} #${s.CheckInStationId}`}</h3>
-        <p>StoreId: {s.StoreId}</p>
-        <StationWallsVisual walls={stationWalls} t={t}/>
+    <div className="panel previewPanel">
+      <h2>Slot Test Actions</h2>
+      <div className="rightPanelActions testButtons">
+        <button onClick={()=>action('Test Slot')}>Test Slot</button>
+        <button onClick={()=>action('Test Charge')}>Test Charge</button>
+        <button onClick={()=>action('Read NFC')}>Read NFC</button>
+        <button onClick={()=>action('Write NFC')}>Write NFC</button>
+        <input className="inlineNfcInput" value={nfcWriteText} onChange={e=>setNfcWriteText(e.target.value)} placeholder="NFC text to write" />
       </div>
-    })}
-    <button className="textBtn" onClick={()=>setShowJson(!showJson)}>{t.fullJson}</button>
-    {showJson&&<pre className="jsonBlock">{JSON.stringify(db,null,2)}</pre>}
+      <div className="wallWithSerials">
+        <WallPreview model={{RowCount:4,ColumnCount:5,HasWelcomeScreen:true}} t={t} activeSlot={selectedSlot} onSlotClick={chooseSlot}/>
+        <div className="nfcSerialList"><h3>Slots Info</h3><div className="emptyState small">Select a slot on the wall or type the slot number.</div></div>
+      </div>
+    </div>
   </section>;
 }
+
+
+function DbViewer({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
+  const t=i18n[lang];
+  const [db,setDb]=useState<any>(null);
+  const [customer,setCustomer]=useState('');
+  const [store,setStore]=useState('');
+  const [search,setSearch]=useState('');
+  const [selectedStationId,setSelectedStationId]=useState('');
+  async function load(){setDb(await window.cloudApi.getDb())}
+  useEffect(()=>{load()},[]);
+  if(!db) return <section className="showStationsPage"><BackHomeButton onClick={onFinish}/><h2>Loading...</h2></section>;
+
+  const customers = db.Customers || [];
+  const stores = db.Stores || [];
+  const walls = db.ChargingWalls || [];
+  const models = db.ChargingWallModels || [];
+  const welcomeScreens = db.WelcomeScreens || [];
+  const allSlots = db.ChargingSlots || [];
+  const stationRows=(db.CheckInStations||[])
+    .filter((s:Row)=>(!store||String(s.StoreId)===String(store)))
+    .filter((s:Row)=>{
+      const q=search.trim().toLowerCase();
+      if(!q) return true;
+      return String(s.CheckInStationId||'').toLowerCase().includes(q) || String(s.Name||'').toLowerCase().includes(q);
+    })
+    .map((s:Row)=>{
+      const stationWalls=walls.filter((w:Row)=>Number(w.CheckInStationId)===Number(s.CheckInStationId));
+      const statusNums=stationWalls.map((w:Row)=>statusToNumber(w.Status));
+      const status = statusNums.length && statusNums.every((x:number)=>x===1) ? 1 : statusNums.some((x:number)=>x===2) ? 2 : 0;
+      const storeRow=stores.find((st:Row)=>String(st.StoreId)===String(s.StoreId));
+      const customerRow=customers.find((c:Row)=>String(c.CustomerId)===String(storeRow?.CustomerId || s.CustomerId));
+      const stationWallDetails = stationWalls.map((w:Row) => {
+        const modelRow = models.find((m:Row)=>String(m.ChargingWallModelId ?? m.id)===String(w.ChargingWallModelId ?? w.chargingWallModelId));
+        const welcomeRow = welcomeScreens.find((ws:Row)=>String(ws.ChargingWallId ?? ws.chargingWallId)===String(w.ChargingWallId ?? w.id));
+        const wallSlots = allSlots.filter((sl:Row)=>String(sl.ChargingWallId ?? sl.chargingWallId)===String(w.ChargingWallId ?? w.id));
+        return {...w, model: modelRow || null, welcomeScreen: welcomeRow || null, slots: wallSlots};
+      });
+      return {...s, CustomerName: customerRow?.CustomerName || customerRow?.Name || `Customer ${storeRow?.CustomerId || s.CustomerId || ''}`, StoreName: storeRow?.StoreName || storeRow?.Name || `Store ${s.StoreId||''}`, WallCount: stationWalls.length, Status: status, StationWalls: stationWallDetails};
+    });
+  const selectedStation = stationRows.find((s:Row)=>String(s.CheckInStationId)===String(selectedStationId)) || stationRows[0] || null;
+
+  return <section className="showStationsPage">
+    <div className="showStationsVisual"><StationIllustration/><div className="panelBottom"><BackHomeButton onClick={onFinish}/></div></div>
+    <div className="showStationsPanel">
+      <div className="toolbar showStationsToolbar"><h2>Check-in Stations</h2><button onClick={load}>Refresh</button></div>
+      <div className="showStationsFilters">
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search station ID or name" />
+        <select value={customer} onChange={e=>{setCustomer(e.target.value);setStore('')}}><option value="">All retailers</option>{customers.filter((c:Row)=>c.CustomerId).map((c:Row)=><option key={c.CustomerId} value={c.CustomerId}>{c.CustomerName||c.Name||`Customer ${c.CustomerId}`}</option>)}</select>
+        <select value={store} onChange={e=>setStore(e.target.value)}><option value="">All stores</option>{stores.filter((s:Row)=>s.StoreId&&(!customer||String(s.CustomerId)===String(customer))).map((s:Row)=><option key={s.StoreId} value={s.StoreId}>{s.StoreName||s.Name||`Store ${s.StoreId}`}</option>)}</select>
+      </div>
+      {selectedStation&&<div className="selectedStationPanel">
+        <div className="selectedStationHeader">
+          <div>
+            <strong>Selected Check-in Station</strong>
+            <h3>{selectedStation.Name || `Station ${selectedStation.CheckInStationId}`}</h3>
+          </div>
+          <span className={`statusPill largeStatus ${statusClass(selectedStation.Status)}`}>{statusLabel(selectedStation.Status)}</span>
+        </div>
+        <div className="selectedStationMeta">
+          <span><b>Station ID</b>{selectedStation.CheckInStationId}</span>
+          <span><b>Customer</b>{selectedStation.CustomerName || '-'}</span>
+          <span><b>Store / Location</b>{selectedStation.StoreName || '-'}</span>
+          <span><b>Walls</b>{selectedStation.WallCount}</span>
+        </div>
+        <div className="selectedStationWalls">
+          {(selectedStation.StationWalls || []).length ? selectedStation.StationWalls.map((w:Row, wallIndex:number) => {
+            const model = w.model || null;
+            const wallStatus = statusToNumber(w.Status);
+            const passedSlots = (w.slots || []).filter((s:Row)=>statusToNumber(s.Status)===1).map((s:Row)=>Number(s.SlotNumber ?? s.slotNumber ?? s.RowNumber ?? 0)).filter(Boolean);
+            const failedSlots = (w.slots || []).filter((s:Row)=>statusToNumber(s.Status)===2).map((s:Row)=>Number(s.SlotNumber ?? s.slotNumber ?? s.RowNumber ?? 0)).filter(Boolean);
+            return <div className="selectedWallCard" key={w.ChargingWallId || w.id || wallIndex}>
+              <div className="selectedWallInfo">
+                <span><b>Wall #{wallIndex}</b></span>
+                <span><b>Wall serial</b>{w.SerialNumber || w.serialNumber || '-'}</span>
+                <span><b>Model</b>{model?.Model || w.Model || '-'}</span>
+                <span><b>Welcome serial</b>{w.welcomeScreen?.SerialNumber || w.WelcomeScreenSerial || '-'}</span>
+                <span><b>Status</b><em className={`statusPill ${statusClass(wallStatus)}`}>{statusLabel(wallStatus)}</em></span>
+              </div>
+              <div className="selectedWallPreview"><WallPreview model={model} t={t} compact completedSlots={passedSlots} failedSlots={failedSlots}/></div>
+            </div>;
+          }) : <div className="emptyState small">No walls linked to this station.</div>}
+        </div>
+      </div>}
+      <table className="stationsTable">
+        <thead><tr><th>Station ID</th><th>Station Name</th><th>Customer</th><th>Location</th><th>Walls</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          {stationRows.map((s:Row)=><tr key={s.CheckInStationId} className={String(selectedStation?.CheckInStationId)===String(s.CheckInStationId)?'selectedRow':''} onClick={()=>setSelectedStationId(String(s.CheckInStationId))}>
+            <td>{s.CheckInStationId}</td>
+            <td>{s.Name||'-'}</td>
+            <td>{s.CustomerName||'-'}</td>
+            <td>{s.StoreName||'-'}</td>
+            <td>{s.WallCount}</td>
+            <td><span className={`statusPill ${statusClass(s.Status)}`}>{statusLabel(s.Status)}</span></td>
+            <td><button className="eyeBtn" title="View station" onClick={(e)=>{e.stopPropagation();setSelectedStationId(String(s.CheckInStationId));}}>👁</button></td>
+          </tr>)}
+          {!stationRows.length&&<tr><td colSpan={7} className="emptyCell">No check-in stations found</td></tr>}
+        </tbody>
+      </table>
+      <div className="whatHappens"><strong>What happens</strong><div><span>• View all check-in stations.</span><span>• Click eye icon to view station details.</span><span>• See number of walls and status.</span><span>• Click Back to return Home.</span></div></div>
+    </div>
+  </section>;
+}
+
 
 
 
@@ -1121,116 +1389,66 @@ async function readScannerValue() {
     return () => { disposed = true; clearInterval(timer); };
   }, [activeTab]);
 
-  return <section className="deviceManagerTabbed">
-    <div className="deviceTabs">
-      <button className={activeTab==='connect'?'active':''} onClick={()=>setActiveTab('connect')}>Connect devices</button>
-      <button className={activeTab==='nfc'?'active':''} onClick={()=>setActiveTab('nfc')}>NFC actions</button>
-      <button className={activeTab==='arduino'?'active':''} onClick={()=>setActiveTab('arduino')}>Arduino</button>
-      <button className={activeTab==='scanner'?'active':''} onClick={()=>setActiveTab('scanner')}>Scanner</button>
-      <button className={activeTab==='data'?'active':''} onClick={()=>setActiveTab('data')}>Read NFC Data</button>
+  return <section className="deviceManagerOnePage">
+    <div className="panel deviceFullPanel">
+      <h2>Device Manager</h2>
+      <div className="deviceManagerGrid">
+        <section className="deviceSection">
+          <h3>Connect devices</h3>
+          <div className="twoCol deviceConnectGrid">
+            <div>
+              <h4>NFC PN532</h4>
+              <label>NFC port</label>
+              <div className="row"><select value={nfcPort} onChange={e=>setNfcPort(e.target.value)}><option value="">Choose NFC port</option>{nfcPorts.map((p:any)=><option key={p.path} value={p.path}>{p.label || p.path}</option>)}</select><button onClick={loadPorts} disabled={busy}>Refresh</button></div>
+              <button onClick={onDetectNfc} disabled={busy}>Auto select NFC</button>
+              <button className="secondary" onClick={testNfc} disabled={busy||!nfcPort}>Test NFC connection</button>
+              <div className={noticeClass(nfcStatusText || deviceState?.nfc?.message || 'NFC status ready')}>{nfcStatusText || deviceState?.nfc?.message || 'NFC status ready'}</div>
+            </div>
+            <div>
+              <h4>Arduino</h4>
+              <label>Arduino port</label>
+              <div className="row"><select value={arduinoPort} onChange={e=>setArduinoPort(e.target.value)}><option value="">Choose Arduino port</option>{arduinoPorts.map((p:any)=><option key={p.path} value={p.path}>{p.label || p.path}</option>)}</select><button onClick={loadPorts} disabled={busy}>Refresh</button></div>
+              <button onClick={onDetectArduino} disabled={busy}>Auto select Arduino</button>
+              <button className="secondary" onClick={testArduino} disabled={busy||!arduinoPort}>Test Arduino connection</button>
+              <div className={noticeClass(arduinoStatusText || deviceState?.arduino?.message || 'Arduino status ready')}>{arduinoStatusText || deviceState?.arduino?.message || 'Arduino status ready'}</div>
+            </div>
+          </div>
+        </section>
+        <section className="deviceSection">
+          <h3>NFC actions</h3>
+          <div className="twoCol">
+            <div>
+              <label className="checkboxLine"><input type="checkbox" checked={nfcImmediate} onChange={e=>setNfcImmediate(e.target.checked)}/> Immediate NFC action</label>
+              <label>Delay before NFC action (ms)</label><input type="number" value={nfcDelayMs} onChange={e=>setNfcDelayMs(Number(e.target.value))} disabled={nfcImmediate}/>
+              <label>NFC detect timeout (ms)</label><input type="number" value={nfcTimeoutMs} onChange={e=>setNfcTimeoutMs(Number(e.target.value))}/>
+              <button onClick={readNfcTagContent} disabled={busy||!nfcPort}>Read NFC Tag</button>
+              <label>Read value</label><input value={readText} readOnly placeholder="NFC tag content"/>
+            </div>
+            <div>
+              <label>Value to write</label><textarea className="nfcTextArea" value={writeValue} onChange={e=>setWriteValue(e.target.value)} placeholder="Enter NFC value to write"/>
+              <button onClick={writeTag} disabled={busy||!nfcPort||!writeValue}>Write NFC Tag</button>
+              <div className={noticeClass(nfcStatusText || 'NFC status ready')}>{nfcStatusText || 'NFC status ready'}</div>
+            </div>
+          </div>
+        </section>
+        <section className="deviceSection">
+          <h3>Arduino actions</h3>
+          <div className="rightPanelActions testButtons"><button onClick={readBattery} disabled={busy||!arduinoPort}>Read battery / charging</button><button onClick={turnTopLedOn} disabled={busy||!arduinoPort}>Turn top LED green on</button><button onClick={turnHandleLedOn} disabled={busy||!arduinoPort}>Turn handle LED green on</button><button className="secondary" onClick={turnAllLedsOff} disabled={busy||!arduinoPort}>Turn LEDs off</button><button className="openWallBtn" onClick={openWallFromDeviceManager} disabled={busy||!arduinoPort}>Open Wall</button></div>
+          <div className={noticeClass(arduinoStatusText || 'Arduino status ready')}>{arduinoStatusText || 'Arduino status ready'}</div>
+          {battery&&<div className="nfcSummary"><strong>Battery</strong><span>Battery: {battery.batteryPercent}%</span><span>Charging: {battery.charging ? 'Yes' : 'No'}</span><span>Time to full: {battery.averageTimeToFullMinutes} min</span><span>Runtime to empty: {battery.runTimeToEmptyMinutes} min</span></div>}
+        </section>
+        <section className="deviceSection">
+          <h3>Scanner</h3>
+          <div className="twoCol"><div><label>Scanner MAC address / fragment</label><input value={scannerMac} onChange={e=>{setScannerMac(e.target.value); localStorage.setItem('c2m-scanner-mac', e.target.value);}} placeholder="Example: DC0303D3E7C"/><button onClick={connectScannerFromManager} disabled={busy||!scannerMac}>Connect scanner</button><button onClick={readScannerValue} disabled={busy||!scannerMac}>Read scanner value</button><button className="secondary" onClick={getScannerVersionFromManager} disabled={busy||!scannerMac}>Get version</button><button className="secondary" onClick={scanBleDevices} disabled={busy}>Scan BLE devices</button><div className={noticeClass(scannerStatusText || deviceState?.scanner?.message || 'Scanner status ready')}>{scannerStatusText || deviceState?.scanner?.message || 'Scanner status ready'}</div></div><div><label>Last scanned value</label><input value={scannerReadValue} readOnly placeholder="Scanner result"/><div className="statusHint">Keyboard mode is enabled: scanned values are typed once into the focused input.</div>{scannerVersion&&<div className="nfcSummary"><strong>Scanner version</strong><span>{scannerVersion}</span></div>}</div></div>
+          {scannerDevices.length>0&&<div className="tableWrap"><table className="nfcTable"><thead><tr><th>Name</th><th>MAC</th><th>RSSI</th></tr></thead><tbody>{scannerDevices.map((d:any,i:number)=><tr key={d.id||i}><td>{d.name||'-'}</td><td className="mono">{d.id||d.address||'-'}</td><td>{d.rssi||'-'}</td></tr>)}</tbody></table></div>}
+        </section>
+        <section className="deviceSection">
+          <div className="toolbar"><h3>Read NFC Data</h3><button onClick={readNfcData} disabled={busy||!nfcPort}>Read NFC Data</button></div>
+          {!readResult&&<div className="emptyState">Read NFC data to show full NFC page table.</div>}
+          {readResult&&<><div className="nfcSummary"><strong>UID: {readResult.uid}</strong><span>User text: {readResult.userText || '(empty)'}</span></div><div className="tableWrap"><table className="nfcTable"><thead><tr><th>Page</th><th>Hex</th><th>ASCII</th><th>Label</th><th>Writable</th></tr></thead><tbody>{readResult.pages.map((p:any)=><tr key={p.page}><td>{p.page}</td><td className="mono">{p.hex}</td><td className="mono">{p.ascii}</td><td>{p.label}</td><td>{p.writable ? 'Yes' : 'No'}</td></tr>)}</tbody></table></div></>}
+        </section>
+      </div>
     </div>
-
-    {activeTab==='connect'&&<div className="panel deviceTabPanel">
-      <h2>Connect devices</h2>
-      <div className="twoCol">
-        <div>
-          <h3>NFC PN532</h3>
-          <label>NFC port</label>
-          <div className="row">
-            <select value={nfcPort} onChange={e=>setNfcPort(e.target.value)}>
-              <option value="">Choose NFC port</option>
-              {nfcPorts.map((p:any)=><option key={p.path} value={p.path}>{p.label || p.path}</option>)}
-            </select>
-            <button onClick={loadPorts} disabled={busy}>Refresh</button>
-          </div>
-          <button onClick={onDetectNfc} disabled={busy}>Auto select NFC</button>
-          <button className="secondary" onClick={testNfc} disabled={busy||!nfcPort}>Test NFC connection</button>
-          <div className="statusBar">{nfcStatusText || deviceState?.nfc?.message || 'NFC status ready'}</div>
-        </div>
-        <div>
-          <h3>Arduino</h3>
-          <label>Arduino port</label>
-          <div className="row">
-            <select value={arduinoPort} onChange={e=>setArduinoPort(e.target.value)}>
-              <option value="">Choose Arduino port</option>
-              {arduinoPorts.map((p:any)=><option key={p.path} value={p.path}>{p.label || p.path}</option>)}
-            </select>
-            <button onClick={loadPorts} disabled={busy}>Refresh</button>
-          </div>
-          <button onClick={onDetectArduino} disabled={busy}>Auto select Arduino</button>
-          <button className="secondary" onClick={testArduino} disabled={busy||!arduinoPort}>Test Arduino connection</button>
-          <div className="statusBar">{arduinoStatusText || deviceState?.arduino?.message || 'Arduino status ready'}</div>
-        </div>
-      </div>
-    </div>}
-
-    {activeTab==='nfc'&&<div className="panel deviceTabPanel">
-      <h2>NFC actions</h2>
-      <div className="twoCol">
-        <div>
-          <label className="checkboxLine"><input type="checkbox" checked={nfcImmediate} onChange={e=>setNfcImmediate(e.target.checked)}/> Immediate NFC action</label>
-          <label>Delay before NFC action (ms)</label>
-          <input type="number" value={nfcDelayMs} onChange={e=>setNfcDelayMs(Number(e.target.value))} disabled={nfcImmediate}/>
-          <label>NFC detect timeout (ms)</label>
-          <input type="number" value={nfcTimeoutMs} onChange={e=>setNfcTimeoutMs(Number(e.target.value))}/>
-          <button onClick={readNfcTagContent} disabled={busy||!nfcPort}>Read NFC Tag</button>
-          <label>Read value</label>
-          <input value={readText} readOnly placeholder="NFC tag content"/>
-        </div>
-        <div>
-          <label>Value to write</label>
-          <textarea className="nfcTextArea" value={writeValue} onChange={e=>setWriteValue(e.target.value)} placeholder="Enter NFC value to write. Max 96 bytes."/>
-          <button onClick={writeTag} disabled={busy||!nfcPort||!writeValue}>Write Tag</button>
-          {writeResult&&<div className="nfcSummary"><strong>Last write</strong><span>UID: {writeResult.uid}</span><span>Bytes: {writeResult.bytesWritten}</span><span>Pages: {writeResult.pagesWritten}</span></div>}
-        </div>
-      </div>
-      <div className="statusBar">{nfcStatusText || 'NFC status ready'}</div>
-    </div>}
-
-    {activeTab==='arduino'&&<div className="panel deviceTabPanel">
-      <h2>Arduino</h2>
-      <div className="twoCol">
-        <div>
-          <div className="arduinoActionButtons">
-            <button onClick={readBattery} disabled={busy||!arduinoPort}>Read battery / charging</button>
-            <button onClick={turnTopLedOn} disabled={busy||!arduinoPort}>Turn top LED green on</button>
-            <button onClick={turnHandleLedOn} disabled={busy||!arduinoPort}>Turn handle LED green on</button>
-            <button className="secondary" onClick={turnAllLedsOff} disabled={busy||!arduinoPort}>Turn LEDs off</button>
-            <button className="openWallBtn" onClick={openWallFromDeviceManager} disabled={busy||!arduinoPort}>Open Wall</button>
-          </div>
-          <div className="statusBar">{arduinoStatusText || 'Arduino status ready'}</div>
-        </div>
-        <div>{battery&&<div className="nfcSummary"><strong>Battery</strong><span>Capacity: {battery.batteryPercent}%</span><span>Charging: {battery.charging ? 'Yes' : 'No'}</span><span>Time to full: {battery.averageTimeToFullMinutes} min</span><span>Runtime to empty: {battery.runTimeToEmptyMinutes} min</span></div>}</div>
-      </div>
-    </div>}
-
-    {activeTab==='scanner'&&<div className="panel deviceTabPanel">
-      <h2>Scanner</h2>
-      <div className="twoCol">
-        <div>
-          <label>Scanner MAC address / fragment</label>
-          <input value={scannerMac} onChange={e=>{setScannerMac(e.target.value); localStorage.setItem('c2m-scanner-mac', e.target.value);}} placeholder="Example: DC0303D3E7C or 303D:40-c7"/>
-          <button onClick={connectScannerFromManager} disabled={busy||!scannerMac}>Connect scanner</button>
-          <button onClick={readScannerValue} disabled={busy||!scannerMac}>Read scanner value</button><button className="secondary" onClick={getScannerVersionFromManager} disabled={busy||!scannerMac}>Get version</button>
-          <button className="secondary" onClick={scanBleDevices} disabled={busy}>Scan BLE devices</button>
-          <div className="statusBar">{scannerStatusText || deviceState?.scanner?.message || 'Scanner status ready'}</div>
-        </div>
-        <div>
-          <label>Last scanned value</label>
-          <input value={scannerReadValue} readOnly placeholder="Scanner result"/>
-          <div className="statusHint">Keyboard mode is enabled: scanned values are typed once into the focused input.</div>{scannerVersion&&<div className="nfcSummary"><strong>Scanner version</strong><span>{scannerVersion}</span></div>}
-        </div>
-      </div>
-    </div>}
-
-    {activeTab==='data'&&<div className="panel deviceTabPanel nfcResultPanel">
-      <div className="toolbar"><h2>Read NFC Data</h2><button onClick={readNfcData} disabled={busy||!nfcPort}>Read NFC Data</button></div>
-      {!readResult&&<div className="emptyState">Read NFC data to show full NFC page table.</div>}
-      {readResult&&<>
-        <div className="nfcSummary"><strong>UID: {readResult.uid}</strong><span>User text: {readResult.userText || '(empty)'}</span></div>
-        <div className="tableWrap"><table className="nfcTable"><thead><tr><th>Page</th><th>Hex</th><th>ASCII</th><th>Label</th><th>Writable</th></tr></thead><tbody>{readResult.pages.map((p:any)=><tr key={p.page}><td>{p.page}</td><td className="mono">{p.hex}</td><td className="mono">{p.ascii}</td><td>{p.label}</td><td>{p.writable ? 'Yes' : 'No'}</td></tr>)}</tbody></table></div>
-      </>}
-    </div>}
   </section>
 }
 function SettingsWindow({ lang }: {lang:Lang}) {
@@ -1268,7 +1486,7 @@ function SettingsWindow({ lang }: {lang:Lang}) {
 
   return <main className="settingsWindow" dir={lang==='he'?'rtl':'ltr'}>
     <div className="panel settingsPanel">
-      <h2>Settings</h2><div className="notice">Build version: v85 restore working retailer + embedded stores</div>
+      <h2>Settings</h2><div className="notice successNotice">Build version: 0.6</div>
       <div className="settingsGrid">
         <label>NFC / cell test timeout (ms)</label>
         <input type="number" value={settings.nfcActionTimeoutMs} onChange={e=>update('nfcActionTimeoutMs', Number(e.target.value))}/>
@@ -1295,7 +1513,7 @@ function SettingsWindow({ lang }: {lang:Lang}) {
         <h3 className="settingsSectionTitle">Cloud connection</h3>
         <div></div>
         <label>Cloud mode</label>
-        <div className="notice">Real cloud only. Local DB fallback is disabled.</div>
+        <div className="notice successNotice">Real cloud only. Local DB fallback is disabled.</div>
         <label>Cloud Base URL</label>
         <input value={settings.cloudBaseUrl || ''} onChange={e=>update('cloudBaseUrl', e.target.value)} placeholder="https://... or https://.../check-in-stations"/>
         <label>Retailer Base URL</label><input value={settings.retailerBaseUrl||''} onChange={e=>setSettings({...settings, retailerBaseUrl:e.target.value})}/><label>OAuth Token URL</label>
@@ -1311,13 +1529,62 @@ function SettingsWindow({ lang }: {lang:Lang}) {
         <button onClick={save}>Save settings</button>
         <button className="secondary" onClick={reset}>Reset defaults</button>
       </div>
-      {msg&&<div className="notice">{msg}</div>}
+      {msg&&<div className={noticeClass(msg)}>{msg}</div>}
     </div>
   </main>
 }
 
-function Home({ lang }: {lang:Lang}) { const t=i18n[lang]; return <section className="panel homePanel"><h2>{t.home}</h2><p>{t.subtitle}</p></section>; }
+function BackHomeButton({ onClick }: { onClick: ()=>void }) {
+  return <button className="backHomeBtn" type="button" onClick={onClick}>← Back to Home</button>;
+}
 
+
+function ChargingWallIllustration() {
+  return <div className="cwIllustration">
+    <div className="cwGrid">
+      {Array.from({length:20}).map((_,i)=><div key={i} className="cwSlot"><span></span></div>)}
+    </div>
+    <div className="cwBaseScreen"></div>
+  </div>;
+}
+
+function StationIllustration() {
+  return <div className="stationIllustration">
+    {Array.from({length:4}).map((_,wall)=><div className="stationMiniWall" key={wall}>
+      <div className="stationMiniGrid">
+        {Array.from({length:20}).map((_,i)=><div key={i} className="stationMiniSlot"></div>)}
+      </div>
+      <div className="stationMiniBase"></div>
+    </div>)}
+  </div>;
+}
+
+function Home({ lang, setTab }: {lang:Lang; setTab:(tab:string)=>void}) {
+  return <section className="wireHome">
+    <div className="wireHomeCard">
+      <h2>CHARGING WALL</h2>
+      <div className="wireHomeContent">
+        <div className="wireProduct wallProduct"><ChargingWallIllustration /></div>
+        <div className="wireActionList">
+          <button onClick={()=>setTab('setupWall')}><i>↗</i><span><strong>Set up new wall</strong><small>Create and configure a new charging wall.</small></span><b>›</b></button>
+          <button onClick={()=>setTab('editWall')}><i>✎</i><span><strong>Edit or proceed setup of existing wall</strong><small>Continue setup or edit existing wall.</small></span><b>›</b></button>
+          <button onClick={()=>setTab('testSlot')}><i>⌕</i><span><strong>Test specific slot</strong><small>Test any slot on the wall.</small></span><b>›</b></button>
+        </div>
+      </div>
+    </div>
+    <div className="wireHomeCard">
+      <h2>CHECK-IN STATION</h2>
+      <div className="wireHomeContent">
+        <div className="wireProduct stationProduct"><StationIllustration /></div>
+        <div className="wireActionList">
+          <button onClick={()=>setTab('createStation')}><i>↗</i><span><strong>Set up Check-in Station</strong><small>Create and configure a new check-in station.</small></span><b>›</b></button>
+          <button onClick={()=>setTab('db')}><i>☷</i><span><strong>Show Check-in Stations</strong><small>View all check-in stations and their status.</small></span><b>›</b></button>
+          <button onClick={()=>setTab('deviceManager')}><i>⚙</i><span><strong>Device Manager</strong><small>Manage connected devices.</small></span><b>›</b></button>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
 
 function ScannerKeyboardBridge({ appSettings }: { appSettings: any }) {
   const [lastValue, setLastValue] = useState('');
@@ -1392,8 +1659,9 @@ window.addEventListener('unhandledrejection', (event) => {
 
 function App(){
   const saved = loadDeviceState();
-  const [tab,setTab]=useState('createWall');
+  const [tab,setTab]=useState('home');
   const [lang,setLang]=useState<Lang>('en');
+  const [lightMode,setLightMode]=useState(false);
   const [appSettings,setAppSettings]=useState<any>(DEFAULT_APP_SETTINGS);
   const [nfcStatus,setNfcStatusRaw]=useState<any>(saved.nfc || {connected:false,portPath:'',message:'Not checked yet'});
   const [arduinoStatus,setArduinoStatusRaw]=useState<any>(saved.arduino || {connected:false,portPath:'',message:'Not checked yet'});
@@ -1495,22 +1763,31 @@ function App(){
   }
 
   if(isDeviceManager){
-    return <main dir={lang==='he'?'rtl':'ltr'}>
-      <Header lang={lang} setLang={setLang} t={t} nfcStatus={nfcStatus} arduinoStatus={arduinoStatus} scannerStatus={scannerStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
+    return <main className={lightMode ? 'lightMode' : ''} dir={lang==='he'?'rtl':'ltr'}>
+      <Header lightMode={lightMode} setLightMode={setLightMode} lang={lang} setLang={setLang} t={t} nfcStatus={nfcStatus} arduinoStatus={arduinoStatus} scannerStatus={scannerStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
       <ScannerKeyboardBridge appSettings={appSettings}/>
-      <DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
+      <section className="appContent">
+        <DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
+      </section>
+      <footer className="appFooter"><span>Version 0.9</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
     </main>;
   }
 
-  return <main dir={lang==='he'?'rtl':'ltr'}>
-    <Header lang={lang} setLang={setLang} t={t} nfcStatus={nfcStatus} arduinoStatus={arduinoStatus} scannerStatus={scannerStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
+  return <main className={lightMode ? 'lightMode' : ''} dir={lang==='he'?'rtl':'ltr'}>
+    <Header lightMode={lightMode} setLightMode={setLightMode} lang={lang} setLang={setLang} t={t} nfcStatus={nfcStatus} arduinoStatus={arduinoStatus} scannerStatus={scannerStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
     <ScannerKeyboardBridge appSettings={appSettings}/>
-    <Tabs tab={tab} setTab={setTab} t={t}/>
-    {tab==='home'&&<Home lang={lang}/>}
-    {tab==='createWall'&&<CreateWall lang={lang} appSettings={appSettings}/>}
-    {tab==='configWall'&&<ConfigWall lang={lang} deviceState={deviceState} appSettings={appSettings}/>}
-    {tab==='createStation'&&<CreateStation lang={lang} appSettings={appSettings}/>}
-    {tab==='db'&&<DbViewer lang={lang}/>}
+    <section className="appContent">
+      {tab==='home'&&<Home lang={lang} setTab={setTab}/>}
+      {tab==='setupWall'&&<GuidedWallSetup lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
+      {tab==='editWall'&&<ConfigWall lang={lang} deviceState={deviceState} appSettings={appSettings} guidedTitle="Edit / proceed existing wall" onFinish={()=>setTab('home')}/>}
+      {tab==='createWall'&&<GuidedWallSetup lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
+      {tab==='configWall'&&<ConfigWall lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
+      {tab==='createStation'&&<CreateStation lang={lang} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
+      {tab==='db'&&<DbViewer lang={lang} onFinish={()=>setTab('home')}/>}
+      {tab==='testSlot'&&<TestSpecificSlot lang={lang} onFinish={()=>setTab('home')}/>}
+      {tab==='deviceManager'&&<section className="deviceManagerScreen"><BackHomeButton onClick={()=>setTab('home')}/><DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/></section>}
+    </section>
+    <footer className="appFooter"><span>Version 0.9</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
   </main>;
 }
 

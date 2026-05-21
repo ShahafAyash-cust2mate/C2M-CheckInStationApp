@@ -1202,3 +1202,1815 @@ main{grid-template-rows:auto auto minmax(0,1fr)!important}
   border-radius: 12px;
   padding: 16px;
 }
+
+
+/* v87 guided workflow and home redesign */
+.homeDashboard{
+  display:grid;
+  grid-template-columns:minmax(360px,1fr) minmax(360px,1fr);
+  gap:28px;
+  align-items:stretch;
+}
+.homeArea{
+  background:linear-gradient(180deg,rgba(30,41,59,.96),rgba(17,28,51,.96));
+  border:1px solid var(--line);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 20px 45px rgba(0,0,0,.18);
+}
+.homeHero{
+  display:grid;
+  grid-template-columns:260px 1fr;
+  align-items:center;
+  gap:24px;
+  padding:34px;
+  min-height:280px;
+  border-bottom:1px solid var(--line);
+}
+.homeHero h2{
+  margin:0 0 18px;
+  font-size:34px;
+}
+.homeHero p{
+  margin:0;
+  color:#cbd5e1;
+  font-size:20px;
+  line-height:1.45;
+}
+.homeIllustration{
+  width:220px;
+  height:220px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(15,23,42,.42);
+  border:1px solid #40516d;
+}
+.miniStationWalls{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  transform:scale(.38);
+  transform-origin:center;
+}
+.miniStationWalls .wallPreview{
+  margin:0 !important;
+}
+.homeActionList{
+  display:grid;
+  padding:18px 28px 28px;
+}
+.homeActionList button{
+  display:grid;
+  grid-template-columns:70px 1fr 40px;
+  align-items:center;
+  text-align:left;
+  background:transparent;
+  color:var(--text);
+  border:0;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  padding:20px 0;
+  font-size:22px;
+  cursor:pointer;
+}
+.homeActionList button:hover{
+  background:rgba(148,163,184,.08);
+}
+.homeActionList button:last-child{
+  border-bottom:0;
+}
+.actionIcon{
+  width:54px;
+  height:54px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #64748b;
+  border-radius:10px;
+  font-size:34px;
+  background:rgba(15,23,42,.65);
+}
+.homeActionList b{
+  justify-self:end;
+  font-size:46px;
+  font-weight:400;
+}
+.workflowSteps{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0 0 18px;
+}
+.workflowSteps span{
+  border:1px solid #334155;
+  background:#111827;
+  color:#94a3b8;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+}
+.workflowSteps span.active{
+  border-color:#22c55e;
+  color:#bbf7d0;
+  background:#12351f;
+}
+.workflowActions{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+.workflowActions button{
+  flex:1;
+}
+.compactActions{
+  margin-top:10px;
+}
+.tabs button{
+  white-space:nowrap;
+}
+@media(max-width:1100px){
+  .homeDashboard{grid-template-columns:1fr}
+  .homeHero{grid-template-columns:1fr}
+}
+
+
+/* v89 wireframe operational shell */
+main.lightMode{
+  --bg:#f7f8fb; --bg2:#ffffff; --panel:#ffffff; --panel2:#ffffff; --text:#111827; --muted:#475569; --line:#d6dbe5;
+  background:#f7f8fb; color:#111827;
+}
+.wireTopHeader{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 28px;border:1px solid var(--line);border-radius:0;background:var(--panel);margin:0 0 24px 0;}
+.wireBrand{display:flex;align-items:center;gap:22px;min-width:420px}.wireBrand .brandLogo{height:58px;width:auto}.wireDivider{height:56px;width:1px;background:var(--line)}.wireBrand h1{font-size:30px;margin:0;color:var(--text)}
+.wireHeaderControls{display:flex;align-items:center;gap:14px}.wireDevice{min-width:126px;height:62px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text);display:grid;grid-template-columns:22px 1fr;grid-template-rows:1fr 1fr;align-items:center;text-align:left;padding:8px 14px}.wireDevice span{grid-row:1/3;width:18px;height:18px;border-radius:999px;border:2px solid currentColor}.wireDevice small{color:var(--muted)}.wireDevice.connected{color:#22c55e}.wireDevice.disconnected{color:#ef4444}.modeSwitch{height:44px;border-radius:10px}.wireLang select{height:44px;min-width:140px}
+.wireHome{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}.wireHomeCard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px}.wireHomeCard h2{font-size:22px;letter-spacing:.04em;margin:0 0 22px}.wireHomeContent{display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:center}.wireProduct{min-height:430px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden}.wallProduct .wallPreview{transform:scale(1.05)}.stationProduct .linkedStationFrame{border:0;background:transparent;padding:0}.stationProduct .linkedWallProps{display:none}.stationProduct .linkedWallUnit{width:auto;border:0}.stationProduct .linkedWallPreviewWrap{transform:scale(.62);transform-origin:center}.stationProduct .linkedStationVisual{gap:0;flex-wrap:nowrap}.wireActionList{display:grid;gap:18px}.wireActionList button{min-height:116px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);color:var(--text);display:grid;grid-template-columns:64px 1fr 28px;align-items:center;text-align:left;padding:18px;cursor:pointer}.wireActionList i{width:48px;height:48px;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:24px}.wireActionList span{display:grid;gap:8px}.wireActionList small{color:var(--muted);line-height:1.35}.wireActionList b{font-size:36px;font-weight:400}.backHomeBtn{width:auto!important;margin:0 0 14px 0;background:#334155!important;color:white!important;padding:10px 14px!important;border-radius:8px!important}.readonlyField{height:44px;border:1px solid var(--line);border-radius:10px;background:var(--bg2);display:flex;align-items:center;padding:0 14px;color:var(--text);font-weight:700}.rightPanelActions{display:flex;gap:10px;margin:0 0 14px}.rightPanelActions button{width:auto;padding:12px 18px}.testButtons{flex-wrap:wrap}.testButtons button{min-width:140px}.dbPanel .toolbar{margin-top:8px}.appFooter{margin-top:28px;border-top:1px solid var(--line);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);background:var(--panel)}
+.tabs{display:none!important}.wireframeHeader,.homeDashboard,.homeArea{display:none!important}
+@media(max-width:1200px){.wireHome{grid-template-columns:1fr}.wireHomeContent{grid-template-columns:1fr}.wireHeaderControls{flex-wrap:wrap}.wireTopHeader{align-items:flex-start}.wireProduct{min-height:260px}}
+
+
+/* v90 layout polish */
+html, body, #root { height: 100%; }
+body { overflow: hidden; }
+main {
+  min-height: 100vh;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr 74px;
+  gap: 0;
+  padding: 0;
+  background: radial-gradient(circle at 20% 0%, #1e3a5f 0, #0f172a 36%, #0b1120 100%);
+}
+.lightMode {
+  background: #ffffff;
+  color: #111827;
+}
+.wireTopHeader {
+  border: 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  min-height: 104px;
+  padding: 18px 36px !important;
+  background: var(--panel) !important;
+}
+.appContent {
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 42px;
+  position: relative;
+}
+.appFooter {
+  height: 74px;
+  margin: 0 !important;
+  padding: 0 36px !important;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+.appFooter span:nth-child(2) { text-align: center; }
+.appFooter span:nth-child(3) { text-align: right; }
+.footerHelp {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+.footerHelp::first-letter {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+.panel, .wireHomeCard {
+  border-radius: 16px;
+}
+.backHomeBtn {
+  position: fixed;
+  left: 36px;
+  bottom: 92px;
+  z-index: 30;
+  margin: 0 !important;
+  width: auto;
+  padding: 10px 16px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 10px;
+}
+.deviceManagerScreen {
+  min-height: 100%;
+  padding-bottom: 64px;
+}
+.deviceManagerScreen > .panel {
+  margin-top: 0;
+}
+.wireHome {
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(520px, 1fr) minmax(520px, 1fr);
+  gap: 28px;
+  align-items: stretch;
+}
+.wireHomeCard {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 26px 30px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100%;
+}
+.wireHomeCard h2 {
+  margin: 0 0 18px;
+  letter-spacing: .04em;
+}
+.wireHomeContent {
+  display: grid;
+  grid-template-columns: 280px minmax(360px, 1fr);
+  gap: 28px;
+  align-items: center;
+}
+.wireProduct {
+  width: 280px;
+  height: 420px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wireActionList {
+  display: grid;
+  gap: 18px;
+}
+.wireActionList button {
+  min-height: 86px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel2);
+  color: var(--text);
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: 54px 1fr 28px;
+  gap: 16px;
+  align-items: center;
+  text-align: left;
+}
+.wireActionList i {
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  font-size: 22px;
+}
+.wireActionList small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}
+.wireActionList b {
+  justify-self: end;
+  font-size: 34px;
+  font-weight: 400;
+}
+.cwIllustration {
+  width: 176px;
+  background: rgba(15,23,42,.18);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,.28);
+}
+.cwGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+.cwSlot {
+  height: 56px;
+  background: #f1f5f9;
+  border: 2px solid #94a3b8;
+  border-radius: 7px;
+  position: relative;
+  box-shadow: inset 0 0 0 2px #e2e8f0;
+}
+.cwSlot span {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  width: 9px;
+  height: 18px;
+  border: 2px solid #111827;
+  border-radius: 3px;
+}
+.cwBaseScreen {
+  height: 78px;
+  margin-top: 8px;
+  background: #1f2937;
+  border-radius: 6px;
+}
+.stationIllustration {
+  display: flex;
+  gap: 0;
+  align-items: flex-end;
+  justify-content: center;
+  transform: scale(.82);
+  transform-origin: center;
+}
+.stationMiniWall {
+  width: 78px;
+  padding: 3px 1px 0;
+  background: rgba(15,23,42,.08);
+}
+.stationMiniGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+}
+.stationMiniSlot {
+  height: 34px;
+  background: #f1f5f9;
+  border: 1px solid #64748b;
+  border-radius: 4px;
+}
+.stationMiniBase {
+  height: 62px;
+  margin-top: 3px;
+  background: #1f2937;
+  border-radius: 4px 4px 8px 8px;
+}
+.stationMiniWall + .stationMiniWall {
+  margin-left: 0;
+}
+.lightMode main {
+  background: #fff;
+}
+.lightMode .wireTopHeader,
+.lightMode .appFooter,
+.lightMode .wireHomeCard,
+.lightMode .panel {
+  background: #ffffff !important;
+}
+.lightMode .wireActionList button,
+.lightMode .backHomeBtn,
+.lightMode .wireDevice,
+.lightMode .modeSwitch,
+.lightMode select,
+.lightMode input {
+  background: #ffffff;
+  color: #111827;
+}
+.lightMode .cwSlot,
+.lightMode .stationMiniSlot {
+  background: #ffffff;
+}
+@media (max-width: 1240px) {
+  .wireHome { grid-template-columns: 1fr; }
+}
+
+
+/* v92 requested setup-wall polish */
+.workflowSteps {
+  display: none !important;
+}
+
+.fullWidthAction {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.appContent {
+  padding-bottom: 96px !important;
+  position: relative;
+}
+
+/* Back to Home should sit inside the current screen area, above the footer */
+.backHomeBtn {
+  position: absolute !important;
+  left: 36px !important;
+  bottom: 18px !important;
+  z-index: 30;
+  margin: 0 !important;
+  width: auto;
+  min-width: 130px;
+  padding: 10px 16px;
+}
+
+main {
+  overflow: hidden;
+}
+
+
+/* v0.1 fixes: selectable test slot, no auto move, show stations redesign */
+.selectedSlotBox{
+  margin:14px 0;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:rgba(16,185,129,.10);
+  color:#bbf7d0;
+}
+.wallSlot{ cursor:pointer; }
+.showStationsPage{
+  min-height:100%;
+  display:grid;
+  grid-template-columns:260px minmax(760px,1fr);
+  gap:24px;
+  padding-bottom:80px;
+}
+.showStationsVisual{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  gap:18px;
+}
+.showStationsVisual .stationIllustration{
+  transform:scale(.92);
+  transform-origin:top left;
+  margin-top:8px;
+}
+.showStationsPanel{
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:var(--panel);
+  padding:22px;
+  min-width:0;
+}
+.showStationsToolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:14px;
+}
+.showStationsFilters{
+  display:grid;
+  grid-template-columns:minmax(220px,1fr) 220px 220px;
+  gap:14px;
+  margin-bottom:12px;
+}
+.stationsTable{
+  width:100%;
+  border-collapse:collapse;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  border-radius:12px;
+  overflow:hidden;
+}
+.stationsTable th,.stationsTable td{
+  padding:12px 14px;
+  border-bottom:1px solid var(--line);
+  text-align:left;
+}
+.stationsTable th{
+  color:var(--muted);
+  font-weight:700;
+}
+.stationsTable tr:last-child td{border-bottom:0;}
+.eyeBtn{
+  background:transparent;
+  border:0;
+  padding:4px 8px;
+  color:var(--text);
+}
+.emptyCell{
+  text-align:center!important;
+  color:var(--muted);
+}
+.whatHappens{
+  margin-top:18px;
+  color:var(--muted);
+}
+.whatHappens strong{color:#60a5fa;display:block;margin-bottom:8px;}
+.whatHappens div{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px 24px;
+}
+.showStationsPage .backHomeBtn{
+  position:static!important;
+  margin-top:14px!important;
+}
+.statusPill{
+  display:inline-block;
+  min-width:64px;
+  text-align:center;
+  border-radius:999px;
+  padding:4px 10px;
+  font-weight:700;
+}
+.statusPill.pass{background:rgba(34,197,94,.18);color:#86efac;}
+.statusPill.failed{background:rgba(239,68,68,.18);color:#fca5a5;}
+.statusPill.unknown{background:rgba(148,163,184,.18);color:#cbd5e1;}
+@media(max-width:1100px){
+  .showStationsPage{grid-template-columns:1fr;}
+  .showStationsFilters{grid-template-columns:1fr;}
+}
+
+/* v0.1 status pill class compatibility */
+.statusPill.statusPass{background:rgba(34,197,94,.18);color:#86efac;}
+.statusPill.statusFailed{background:rgba(239,68,68,.18);color:#fca5a5;}
+.statusPill.statusUnknown{background:rgba(148,163,184,.18);color:#cbd5e1;}
+
+
+/* v0.1 layout/status polish */
+html, body, #root {
+  height: 100%;
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+}
+main {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-rows: auto 1fr 74px !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+.appContent {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: auto !important;
+  padding-bottom: 96px !important;
+  box-sizing: border-box !important;
+}
+.appFooter {
+  grid-row: 3 !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  max-height: 74px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+.pageGrid,
+.horizontalPage {
+  min-height: calc(100% - 20px) !important;
+  height: calc(100% - 20px) !important;
+  align-items: stretch !important;
+}
+.pageGrid > .panel,
+.horizontalPage > .panel,
+.deviceManagerScreen > .panel,
+.dbPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+.notice.successNotice,
+.notice:not(.errorNotice) {
+  background: #113d1e !important;
+  border-color: #2f7a25 !important;
+  color: #b7f7a2 !important;
+}
+.notice.errorNotice {
+  background: #4a1111 !important;
+  border-color: #dc2626 !important;
+  color: #fecaca !important;
+}
+
+
+/* v0.2 General.docx implementation */
+main{height:100vh!important;min-height:100vh!important;display:grid!important;grid-template-rows:auto minmax(0,1fr) 74px!important;overflow:hidden!important;padding:0!important;gap:0!important}
+.wireTopHeader{margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;padding:18px 36px!important}
+.appContent{height:100%!important;min-height:0!important;overflow:auto!important;padding:28px 42px 28px!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important}.appFooter{height:74px!important;min-height:74px!important;margin:0!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-bottom:0!important;padding:0 36px!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;align-items:center!important}.appFooter span:nth-child(2){text-align:center}.appFooter span:nth-child(3){text-align:right}
+.pageGrid,.horizontalPage{flex:1 1 auto!important;height:100%!important;min-height:0!important;display:grid!important;grid-template-columns:minmax(420px,0.95fr) minmax(560px,1.75fr)!important;align-items:stretch!important;gap:24px!important}.pageGrid>.panel,.horizontalPage>.panel{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important}.previewPanel{overflow:auto!important}.panelBottom{margin-top:auto!important;padding-top:18px!important}.backHomeBtn{position:static!important;margin:0!important;align-self:flex-start!important;background:#334155!important;color:#fff!important;border:1px solid #475569!important}.fullWidthAction{width:100%;margin-top:18px}.formPanel .notice{margin-top:14px}.modelPreviewList{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}.modelPreviewCard{border:1px solid var(--line);border-radius:16px;padding:14px;background:#172033;display:grid;gap:12px}.modelPreviewCard.selected{border-color:#55a51f;box-shadow:0 0 0 2px #55a51f55}.modelPreviewCard h3{margin:0;color:var(--text);font-size:16px;max-width:360px}.wallPreviewWithBase{width:max-content;display:grid;gap:6px}.wallBaseStrip{height:58px;border-radius:6px;background:#1f2937;border:1px solid #374151}.compactPreview .wallBaseStrip{height:30px}.wallProduct .wallPreviewWithBase,.stationProduct .wallPreviewWithBase{transform:none}.stationIllustration{display:flex!important;gap:0!important;align-items:flex-end;justify-content:center}.stationMiniWall{margin:0!important;border:1px solid rgba(255,255,255,.55);border-right:0}.stationMiniWall:last-child{border-right:1px solid rgba(255,255,255,.55)}.stationMiniBase{background:#111827!important;border:1px solid rgba(255,255,255,.8)!important}.stationMiniSlot{border-color:#f8fafc!important}.cwBaseScreen{border:1px solid rgba(255,255,255,.8)}
+.wallWithSerials{align-items:flex-start!important}.nfcSerialList{align-self:flex-start!important;margin-top:0!important}.inlineNfcInput{min-width:240px;width:260px!important}.selectedSlotBox{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;color:#bbf7d0;background:#14322c}.stationDetailsSummary{border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0 16px;background:#172033;display:flex;gap:18px;flex-wrap:wrap;color:#dbeafe}.stationsTable tr{cursor:pointer}.stationsTable tr.selectedRow td{background:#1f3b5b!important}.showStationsPage{height:100%!important;display:grid!important;grid-template-columns:260px 1fr!important;gap:24px!important;align-items:stretch!important}.showStationsVisual{height:100%!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;padding:20px!important}.showStationsVisual .stationIllustration{margin-top:20px;transform:scale(.78);transform-origin:top left}.showStationsPanel{height:100%!important;overflow:auto!important;border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:22px!important}.showStationsFilters{display:grid!important;grid-template-columns:1fr 240px 240px!important;gap:16px!important;margin-bottom:14px}.textBtn{display:none!important}.deviceManagerOnePage{height:100%;overflow:auto}.deviceFullPanel{min-height:100%;height:auto!important}.deviceManagerGrid{display:grid;grid-template-columns:1fr;gap:20px}.deviceSection{border:1px solid var(--line);border-radius:16px;background:#172033;padding:18px}.deviceSection h3{margin:0 0 14px;color:var(--text)}.deviceConnectGrid{grid-template-columns:1fr 1fr}.deviceSection button{margin-top:10px}.deviceSection .notice{margin-top:12px}.wireDevice.connected{color:#22c55e!important;background:#0f2b1d!important;border-color:#16a34a!important}.wireDevice.disconnected{color:#ef4444!important;background:#2c1518!important;border-color:#dc2626!important}.wireDevice.connected small,.wireDevice.disconnected small{color:currentColor!important;opacity:.85}.lightMode{--bg:#fff;--bg2:#fff;--panel:#fff;--panel2:#f8fafc;--text:#111827;--muted:#475569;--line:#cbd5e1;background:#fff!important;color:#111827!important}.lightMode body,.lightMode main{background:#fff!important}.lightMode .wireTopHeader,.lightMode .appFooter,.lightMode .panel,.lightMode .wireHomeCard,.lightMode .showStationsPanel{background:#fff!important;color:#111827!important}.lightMode h1,.lightMode h2,.lightMode h3,.lightMode h4,.lightMode label,.lightMode .formPanel label,.lightMode .wireBrand h1{color:#111827!important}.lightMode .brandLogo,.lightMode .wireBrand svg,.lightMode .wireBrand img{filter:invert(1)!important}.lightMode input,.lightMode select,.lightMode textarea,.lightMode .readonlyField{background:#fff!important;color:#111827!important;border-color:#cbd5e1!important}.lightMode .backHomeBtn{background:#fff!important;color:#111827!important;border-color:#94a3b8!important}.lightMode .wallCanvas,.lightMode .modelPreviewCard,.lightMode .deviceSection,.lightMode .emptyState,.lightMode .stationDetailsSummary{background:#fff!important;color:#111827!important}.lightMode .slotCard strong,.lightMode .slotInner strong{color:#111827!important}.lightMode .wallBaseStrip,.lightMode .cwBaseScreen,.lightMode .stationMiniBase{background:#111827!important}.lightMode .wireDevice.connected{background:#e8f8ee!important;color:#15803d!important;border-color:#22c55e!important}.lightMode .wireDevice.disconnected{background:#fee2e2!important;color:#b91c1c!important;border-color:#ef4444!important}.notice.warningNotice{background:#3f2f08!important;border-color:#f59e0b!important;color:#fde68a!important}.lightMode .notice.warningNotice{background:#fffbeb!important;border-color:#f59e0b!important;color:#92400e!important}.lightMode .notice.errorNotice{background:#fee2e2!important;border-color:#dc2626!important;color:#991b1b!important}.lightMode .notice.successNotice,.lightMode .notice:not(.errorNotice):not(.warningNotice){background:#dcfce7!important;border-color:#22c55e!important;color:#166534!important}@media(max-width:1100px){.pageGrid,.horizontalPage,.showStationsPage{grid-template-columns:1fr!important;height:auto!important}.showStationsFilters{grid-template-columns:1fr!important}.deviceConnectGrid{grid-template-columns:1fr!important}}
+
+
+/* v0.5 final panel-height and selected-station polish */
+html, body, #root {
+  height: 100%;
+  min-height: 100%;
+}
+body {
+  overflow: hidden !important;
+}
+main {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) 74px !important;
+  overflow: hidden !important;
+}
+.appContent {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  padding: 28px 42px 96px !important;
+  box-sizing: border-box !important;
+}
+.appFooter {
+  grid-row: 3 !important;
+  height: 74px !important;
+  min-height: 74px !important;
+  max-height: 74px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+.pageGrid,
+.horizontalPage,
+.testSpecificSlotPage,
+.deviceManagerOnePage,
+.deviceManagerScreen {
+  height: 100% !important;
+  min-height: 0 !important;
+  align-items: stretch !important;
+}
+.pageGrid,
+.horizontalPage,
+.testSpecificSlotPage {
+  display: grid !important;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(600px, 1.75fr) !important;
+  gap: 18px !important;
+}
+.pageGrid > .panel,
+.horizontalPage > .panel,
+.testSpecificSlotPage > .panel,
+.deviceManagerOnePage > .panel,
+.deviceManagerScreen > .panel {
+  height: 100% !important;
+  min-height: 0 !important;
+  align-self: stretch !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+}
+
+/* show check-in stations should also use the same available height */
+.showStationsPage {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: 260px minmax(760px, 1fr) !important;
+  gap: 24px !important;
+  align-items: stretch !important;
+  padding-bottom: 0 !important;
+}
+.showStationsVisual,
+.showStationsPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+}
+.showStationsVisual {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+.showStationsPanel {
+  overflow: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.showStationsFilters {
+  display: grid !important;
+  grid-template-columns: minmax(220px, 1fr) 220px 220px !important;
+  gap: 14px !important;
+}
+
+/* Prominent selected check-in station area */
+.selectedStationPanel {
+  border: 2px solid #55a51f;
+  box-shadow: 0 0 0 1px rgba(85,165,31,.24), 0 22px 55px rgba(0,0,0,.28);
+  background: linear-gradient(180deg, rgba(30,64,42,.82), rgba(18,32,48,.96));
+  border-radius: 18px;
+  padding: 18px;
+  margin: 14px 0 18px;
+}
+.selectedStationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.selectedStationHeader strong {
+  color: #bbf7d0;
+  font-size: 14px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.selectedStationHeader h3 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  color: #fff;
+}
+.largeStatus {
+  font-size: 15px !important;
+  padding: 7px 16px !important;
+}
+.selectedStationMeta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.selectedStationMeta span {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--line);
+  background: rgba(15,23,42,.68);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #dbeafe;
+}
+.selectedStationMeta b,
+.selectedWallInfo b {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.selectedStationWalls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: stretch;
+}
+.selectedWallCard {
+  width: 292px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(15,23,42,.88);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.selectedWallCard:first-child {
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+.selectedWallCard:last-child {
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+.selectedWallInfo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  color: #dbeafe;
+  font-size: 13px;
+}
+.selectedWallInfo em {
+  font-style: normal;
+  display: inline-flex;
+  margin-top: 3px;
+}
+.selectedWallPreview {
+  display: flex;
+  justify-content: flex-start;
+  overflow: auto;
+}
+.selectedWallPreview .wallPreviewWithBase {
+  transform: scale(.74);
+  transform-origin: top left;
+  margin-bottom: -68px;
+  min-width: 260px;
+}
+.stationsTable tr.selectedRow td {
+  background: #14532d !important;
+  color: #ecfdf5 !important;
+  border-top: 1px solid #55a51f !important;
+  border-bottom: 1px solid #55a51f !important;
+}
+.stationsTable tr:hover td {
+  background: rgba(85,165,31,.16);
+}
+
+/* Message colors: warning is yellow, errors red, success green */
+.notice.successNotice,
+.notice:not(.errorNotice):not(.warningNotice) {
+  background: #113d1e !important;
+  border-color: #2f7a25 !important;
+  color: #b7f7a2 !important;
+}
+.notice.errorNotice {
+  background: #4a1111 !important;
+  border-color: #dc2626 !important;
+  color: #fecaca !important;
+}
+.notice.warningNotice {
+  background: #3f2f08 !important;
+  border-color: #f59e0b !important;
+  color: #fde68a !important;
+}
+
+@media(max-width:1100px) {
+  .pageGrid,
+  .horizontalPage,
+  .testSpecificSlotPage,
+  .showStationsPage {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  .selectedStationMeta {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+
+/* v0.6 release fix: every two-panel workflow panel fills the same available height */
+main {
+  height: 100vh !important;
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) 74px !important;
+  overflow: hidden !important;
+}
+.appContent {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+.pageGrid,
+.pageGrid.horizontalPage,
+.horizontalPage,
+.testSpecificSlotPage {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  align-items: stretch !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+}
+.pageGrid > .panel,
+.pageGrid.horizontalPage > .panel,
+.horizontalPage > .panel,
+.testSpecificSlotPage > .panel,
+.formPanel,
+.previewPanel,
+.modelPreviewPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: auto !important;
+}
+.panelBottom {
+  margin-top: auto !important;
+  padding-top: 18px !important;
+}
+@media (max-width: 1100px) {
+  .pageGrid,
+  .pageGrid.horizontalPage,
+  .horizontalPage,
+  .testSpecificSlotPage {
+    height: auto !important;
+    grid-auto-rows: auto !important;
+  }
+}
+
+
+/* v0.7 - 1920x1080 fit: compact header/footer, no wasted spacing, no horizontal overflow */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden !important;
+}
+
+body {
+  margin: 0 !important;
+}
+
+main {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  display: grid !important;
+  grid-template-rows: 92px minmax(0, 1fr) 52px !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Compact header */
+.wireTopHeader {
+  min-height: 92px !important;
+  height: 92px !important;
+  padding: 12px 32px !important;
+  gap: 18px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.wireBrand {
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  gap: 18px !important;
+}
+
+.wireBrand .brandLogo {
+  height: 44px !important;
+  max-width: 220px !important;
+}
+
+.wireDivider {
+  height: 44px !important;
+}
+
+.wireBrand h1 {
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.wireHeaderControls {
+  flex: 0 0 auto !important;
+  gap: 10px !important;
+}
+
+.wireDevice {
+  min-width: 118px !important;
+  width: 118px !important;
+  height: 52px !important;
+  padding: 7px 10px !important;
+  border-radius: 9px !important;
+  grid-template-columns: 18px 1fr !important;
+  font-size: 12px !important;
+}
+
+.wireDevice span {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.wireDevice strong {
+  font-size: 13px !important;
+  line-height: 1.05 !important;
+}
+
+.wireDevice small {
+  font-size: 10px !important;
+  line-height: 1.05 !important;
+}
+
+.modeSwitch {
+  height: 42px !important;
+  min-width: 62px !important;
+  padding: 0 14px !important;
+  border-radius: 9px !important;
+}
+
+.wireLang select {
+  height: 42px !important;
+  min-width: 116px !important;
+  width: 116px !important;
+}
+
+/* Main screen area fills all space between header and footer */
+.appContent {
+  grid-row: 2 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  overflow-x: hidden !important;
+  padding: 22px 30px 66px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Compact footer always visible */
+.appFooter {
+  grid-row: 3 !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+  padding: 0 28px !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
+}
+
+/* Back button inside available screen area */
+.backHomeBtn {
+  left: 30px !important;
+  bottom: 64px !important;
+  padding: 8px 14px !important;
+  min-width: 120px !important;
+  height: 38px !important;
+  font-size: 13px !important;
+}
+
+/* All two-panel workflow screens: stretch to the full available height */
+.pageGrid,
+.pageGrid.horizontalPage,
+.horizontalPage,
+.testSpecificSlotPage,
+.configPage,
+.guidedWallPage,
+.wallSetupPage,
+.twoPanelPage {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  display: grid !important;
+  grid-template-columns: minmax(420px, 0.92fr) minmax(760px, 1.68fr) !important;
+  gap: 18px !important;
+  align-items: stretch !important;
+  grid-auto-rows: minmax(0, 1fr) !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+
+.pageGrid > .panel,
+.pageGrid.horizontalPage > .panel,
+.horizontalPage > .panel,
+.testSpecificSlotPage > .panel,
+.configPage > .panel,
+.guidedWallPage > .panel,
+.wallSetupPage > .panel,
+.twoPanelPage > .panel,
+.formPanel,
+.previewPanel,
+.modelPreviewPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  align-self: stretch !important;
+  box-sizing: border-box !important;
+  padding: 22px !important;
+  border-radius: 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: auto !important;
+}
+
+/* Remove unneeded vertical gaps in panels */
+.panel h2,
+.formPanel h2,
+.previewPanel h2 {
+  margin-bottom: 14px !important;
+}
+
+.formPanel label {
+  margin: 10px 0 6px !important;
+}
+
+.formPanel button {
+  margin-top: 10px !important;
+}
+
+.notice {
+  margin-top: 10px !important;
+  padding: 10px 12px !important;
+}
+
+/* Home should fit 1920x1080 without scrollbars */
+.wireHome {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 22px !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+.wireHomeCard {
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 22px 26px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.wireHomeCard h2 {
+  font-size: 24px !important;
+  margin-bottom: 14px !important;
+}
+
+.wireHomeContent {
+  min-height: 0 !important;
+  grid-template-columns: 260px minmax(0, 1fr) !important;
+  gap: 22px !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+.wireProduct {
+  width: 250px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 520px !important;
+  overflow: hidden !important;
+}
+
+.wireActionList {
+  gap: 14px !important;
+}
+
+.wireActionList button {
+  min-height: 74px !important;
+  padding: 14px 18px !important;
+  grid-template-columns: 48px 1fr 24px !important;
+}
+
+.wireActionList i {
+  width: 42px !important;
+  height: 42px !important;
+  font-size: 20px !important;
+}
+
+.wireActionList b {
+  font-size: 28px !important;
+}
+
+/* Show check-in stations also fits in the same screen area */
+.showStationsPage {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+  gap: 18px !important;
+  padding-bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+.showStationsVisual {
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 16px !important;
+  overflow: hidden !important;
+}
+
+.showStationsVisual .stationIllustration {
+  transform: scale(.62) !important;
+  transform-origin: top left !important;
+  margin-top: 10px !important;
+}
+
+.showStationsPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 18px !important;
+  overflow: auto !important;
+  box-sizing: border-box !important;
+}
+
+.showStationsFilters {
+  grid-template-columns: minmax(280px, 1fr) 210px 210px !important;
+  gap: 12px !important;
+}
+
+.selectedStationPanel {
+  padding: 14px !important;
+  margin: 10px 0 14px !important;
+}
+
+.selectedStationHeader h3 {
+  font-size: 20px !important;
+}
+
+.selectedStationMeta {
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+}
+
+.selectedWallCard {
+  width: 248px !important;
+  padding: 10px !important;
+}
+
+.selectedWallPreview .wallPreviewWithBase {
+  transform: scale(.62) !important;
+  margin-bottom: -94px !important;
+}
+
+.stationsTable th,
+.stationsTable td {
+  padding: 9px 12px !important;
+}
+
+/* Model preview cards fit without huge scrollbars */
+.modelPreviewList {
+  gap: 18px !important;
+  align-items: stretch !important;
+}
+
+.modelPreviewCard {
+  padding: 12px !important;
+  min-height: 0 !important;
+}
+
+/* Make model cards less tall in setup wall */
+.modelPreviewCard .wallPreviewWithBase {
+  transform-origin: top left !important;
+}
+
+/* 1920x1080 and smaller: final scaling */
+@media (max-width: 1920px), (max-height: 1080px) {
+  main {
+    grid-template-rows: 88px minmax(0, 1fr) 48px !important;
+  }
+  .wireTopHeader {
+    height: 88px !important;
+    min-height: 88px !important;
+    padding: 10px 28px !important;
+  }
+  .appFooter {
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+  }
+  .appContent {
+    padding: 20px 28px 60px !important;
+  }
+  .pageGrid,
+  .pageGrid.horizontalPage,
+  .horizontalPage,
+  .testSpecificSlotPage,
+  .configPage,
+  .guidedWallPage,
+  .wallSetupPage,
+  .twoPanelPage {
+    gap: 16px !important;
+  }
+  .pageGrid > .panel,
+  .pageGrid.horizontalPage > .panel,
+  .horizontalPage > .panel,
+  .testSpecificSlotPage > .panel,
+  .configPage > .panel,
+  .guidedWallPage > .panel,
+  .wallSetupPage > .panel,
+  .twoPanelPage > .panel,
+  .formPanel,
+  .previewPanel,
+  .modelPreviewPanel {
+    padding: 20px !important;
+  }
+}
+
+@media (max-width: 1500px) {
+  .wireBrand h1 {
+    font-size: 24px !important;
+  }
+  .wireDevice {
+    min-width: 104px !important;
+    width: 104px !important;
+  }
+  .pageGrid,
+  .pageGrid.horizontalPage,
+  .horizontalPage,
+  .testSpecificSlotPage,
+  .configPage,
+  .guidedWallPage,
+  .wallSetupPage,
+  .twoPanelPage {
+    grid-template-columns: minmax(360px, 0.9fr) minmax(560px, 1.5fr) !important;
+  }
+}
+
+
+/* v0.8 - final 1920x1080 compact workflow fixes */
+
+/* Reduce vertical gaps between header/content/footer */
+main {
+  grid-template-rows: 80px minmax(0, 1fr) 44px !important;
+}
+.wireTopHeader {
+  height: 80px !important;
+  min-height: 80px !important;
+  padding: 8px 28px !important;
+}
+.appContent {
+  padding: 8px 28px 48px !important;
+  gap: 0 !important;
+}
+.appFooter {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  padding: 0 28px !important;
+}
+.backHomeBtn {
+  bottom: 52px !important;
+  height: 34px !important;
+  padding: 7px 13px !important;
+}
+
+/* Compact common panels and forms */
+.pageGrid,
+.pageGrid.horizontalPage,
+.horizontalPage,
+.testSpecificSlotPage,
+.showStationsPage {
+  gap: 12px !important;
+}
+.pageGrid > .panel,
+.pageGrid.horizontalPage > .panel,
+.horizontalPage > .panel,
+.testSpecificSlotPage > .panel,
+.formPanel,
+.previewPanel,
+.modelPreviewPanel,
+.showStationsPanel {
+  padding: 16px !important;
+}
+.panel h2,
+.formPanel h2,
+.previewPanel h2 {
+  margin: 0 0 10px !important;
+}
+.formPanel label {
+  margin: 8px 0 4px !important;
+}
+.formPanel input,
+.formPanel select {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+.formPanel button {
+  min-height: 38px !important;
+  height: 38px !important;
+  margin-top: 8px !important;
+}
+
+/* Set up new wall: make model cards narrow enough for 2 side-by-side on 1920x1080 */
+.modelPreviewList {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(260px, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+.modelPreviewCard {
+  min-width: 0 !important;
+  max-width: none !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 10px !important;
+  overflow: hidden !important;
+}
+.modelPreviewCard h3 {
+  font-size: 14px !important;
+  margin-bottom: 6px !important;
+}
+.modelPreviewCard .wallPreviewWithBase,
+.modelPreviewCard .wallCanvas,
+.modelPreviewCard .wallCanvasWrap {
+  transform: scale(.74) !important;
+  transform-origin: top left !important;
+}
+.modelPreviewCard .wallPreviewWithBase {
+  height: 310px !important;
+}
+.modelPreviewCard .wallBaseStrip {
+  height: 36px !important;
+}
+.previewPanel .modelPreviewList {
+  max-width: 100% !important;
+}
+
+/* Edit/proceed existing wall: Slots Info aligned near title row */
+.wallWithSerials,
+.configureWallLayout,
+.wallAndSlots,
+.wallPreviewWithSlots {
+  align-items: flex-start !important;
+}
+.nfcSerialList,
+.slotsInfoPanel,
+.slotsInfo,
+.nfcPanel {
+  align-self: flex-start !important;
+  margin-top: 0 !important;
+}
+.previewPanel .nfcSerialList,
+.previewPanel .slotsInfoPanel,
+.previewPanel .slotsInfo,
+.previewPanel .nfcPanel {
+  margin-top: 0 !important;
+}
+
+/* Welcome screen serial in edit mode should be display-only-like */
+.formPanel input[readonly],
+.formPanel .readonlyInput,
+.formPanel .displayOnlyInput {
+  background: rgba(15,23,42,.45) !important;
+  color: #cbd5e1 !important;
+  pointer-events: none !important;
+}
+
+/* Set up Check-in Station: place wall serial input and Add wall on one row */
+.serialFindRow,
+.addWallRow,
+.stationAddWallRow,
+.wallSerialRow {
+  display: grid !important;
+  grid-template-columns: minmax(180px, 1fr) 150px !important;
+  gap: 10px !important;
+  align-items: end !important;
+}
+.serialFindRow button,
+.addWallRow button,
+.stationAddWallRow button,
+.wallSerialRow button {
+  width: 150px !important;
+  margin-top: 0 !important;
+}
+.createStationPage .formPanel button,
+.stationSetupPage .formPanel button {
+  min-height: 36px !important;
+}
+
+/* Fallback: when the Add wall button follows the charging wall input area */
+.formPanel label + .serialFindRow,
+.formPanel label + .addWallRow {
+  margin-top: 0 !important;
+}
+
+/* Check-in Stations: compact, more fits, and wall visual is visible instead of empty placeholder */
+.showStationsPage {
+  grid-template-columns: 210px minmax(0, 1fr) !important;
+  gap: 10px !important;
+}
+.showStationsVisual {
+  padding: 12px !important;
+}
+.showStationsPanel {
+  padding: 14px !important;
+}
+.showStationsToolbar {
+  margin-bottom: 8px !important;
+}
+.showStationsFilters {
+  grid-template-columns: minmax(260px, 1fr) 190px 190px !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+.selectedStationPanel {
+  padding: 10px 12px !important;
+  margin: 8px 0 10px !important;
+  max-height: 335px !important;
+  overflow: auto !important;
+}
+.selectedStationHeader {
+  margin-bottom: 8px !important;
+}
+.selectedStationHeader h3 {
+  font-size: 18px !important;
+}
+.selectedStationMeta {
+  grid-template-columns: repeat(4, minmax(90px, 1fr)) !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+}
+.selectedStationMeta span {
+  padding: 7px 9px !important;
+  font-size: 12px !important;
+}
+.selectedStationWalls {
+  gap: 0 !important;
+  max-height: 210px !important;
+  overflow: auto !important;
+}
+.selectedWallCard {
+  width: 205px !important;
+  padding: 8px !important;
+}
+.selectedWallInfo {
+  gap: 3px !important;
+  font-size: 11px !important;
+}
+.selectedWallPreview {
+  min-height: 120px !important;
+  overflow: visible !important;
+}
+.selectedWallPreview .emptyState {
+  display: none !important;
+}
+.selectedWallPreview .wallPreviewWithBase,
+.selectedWallPreview .wallCanvas,
+.selectedWallPreview .wallCanvasWrap {
+  transform: scale(.50) !important;
+  transform-origin: top left !important;
+}
+.selectedWallPreview .wallPreviewWithBase {
+  height: 170px !important;
+  min-width: 190px !important;
+}
+.stationsTable th,
+.stationsTable td {
+  padding: 7px 9px !important;
+  font-size: 12px !important;
+}
+.whatHappens {
+  margin-top: 10px !important;
+  font-size: 12px !important;
+}
+
+/* Device Manager: compact so more content is visible without scrolling */
+.deviceManagerOnePage,
+.deviceManagerScreen {
+  padding-bottom: 0 !important;
+}
+.deviceFullPanel,
+.deviceManagerScreen > .panel {
+  padding: 14px 18px !important;
+}
+.deviceSection {
+  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+}
+.deviceSection h3 {
+  margin-bottom: 8px !important;
+}
+.deviceSection label {
+  margin: 6px 0 3px !important;
+}
+.deviceSection button {
+  min-height: 36px !important;
+  height: 36px !important;
+  margin-top: 6px !important;
+}
+.deviceConnectGrid {
+  gap: 12px !important;
+}
+.deviceSection .notice {
+  padding: 8px 10px !important;
+  margin-top: 8px !important;
+}
+
+/* Avoid horizontal scrollbars in normal 1920 screen */
+* {
+  box-sizing: border-box;
+}
+.appContent,
+.previewPanel,
+.formPanel,
+.showStationsPanel,
+.deviceFullPanel {
+  overflow-x: hidden !important;
+}
+
+@media (max-height: 900px) {
+  main { grid-template-rows: 72px minmax(0, 1fr) 40px !important; }
+  .wireTopHeader { height: 72px !important; min-height: 72px !important; }
+  .appFooter { height: 40px !important; min-height: 40px !important; max-height: 40px !important; }
+  .appContent { padding-top: 6px !important; padding-bottom: 44px !important; }
+  .wireBrand .brandLogo { height: 38px !important; }
+  .wireBrand h1 { font-size: 26px !important; }
+  .wireDevice { height: 46px !important; }
+}
+
+
+/* ===========================
+   V0.9 FINAL UI FIXES
+=========================== */
+
+/* ultra compact app spacing */
+.appContent,
+.mainContent,
+.pageContent {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  gap: 6px !important;
+}
+
+.pageGrid,
+.horizontalPage,
+.showStationsPage,
+.testSpecificSlotPage {
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.appFooter {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 12px !important;
+}
+
+.wireTopHeader {
+  padding: 4px 12px !important;
+  min-height: 68px !important;
+  height: 68px !important;
+}
+
+/* ===========================
+   EDIT EXISTING WALL
+=========================== */
+
+/* move slots info up */
+.configureWallLayout,
+.wallPreviewWithSlots,
+.wallWithSerials {
+  align-items: flex-start !important;
+}
+
+.slotsInfoPanel,
+.slotsInfo,
+.nfcSerialList {
+  margin-top: -42px !important;
+  align-self: flex-start !important;
+}
+
+/* readonly welcome serial */
+input[readonly],
+.readonlyInput {
+  pointer-events: none !important;
+  opacity: .85 !important;
+  border-color: rgba(255,255,255,.15) !important;
+}
+
+/* ===========================
+   SETUP CHECK-IN STATION
+=========================== */
+
+/* put add wall near serial */
+.stationWallRow,
+.serialAndButtonRow,
+.addWallInlineRow {
+  display: flex !important;
+  align-items: end !important;
+  gap: 8px !important;
+}
+
+.stationWallRow input,
+.serialAndButtonRow input,
+.addWallInlineRow input {
+  flex: 1 !important;
+}
+
+.stationWallRow button,
+.serialAndButtonRow button,
+.addWallInlineRow button {
+  width: 140px !important;
+  margin-top: 0 !important;
+}
+
+/* reduce form spacing */
+.formPanel label {
+  margin-top: 4px !important;
+  margin-bottom: 2px !important;
+}
+
+.formPanel button {
+  margin-top: 4px !important;
+}
+
+.backHomeBtn {
+  bottom: 42px !important;
+}
+
+/* ===========================
+   CHECK-IN STATIONS
+=========================== */
+
+/* make controls smaller instead of wall preview */
+.showStationsPanel {
+  padding: 10px !important;
+}
+
+.selectedStationPanel {
+  padding: 8px !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.selectedStationHeader h3 {
+  font-size: 16px !important;
+  margin-bottom: 4px !important;
+}
+
+.selectedStationMeta {
+  gap: 4px !important;
+}
+
+.selectedStationMeta span,
+.selectedStationMeta div {
+  padding: 4px 6px !important;
+  font-size: 11px !important;
+}
+
+.selectedStationWalls {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.selectedWallCard {
+  width: 250px !important;
+  padding: 6px !important;
+}
+
+.selectedWallInfo {
+  font-size: 10px !important;
+  gap: 2px !important;
+}
+
+/* restore actual wall preview */
+.selectedWallPreview {
+  min-height: 200px !important;
+  overflow: visible !important;
+}
+
+.selectedWallPreview .wallPreviewWithBase,
+.selectedWallPreview .wallCanvas,
+.selectedWallPreview .wallCanvasWrap {
+  transform: scale(.72) !important;
+  transform-origin: top left !important;
+}
+
+.selectedWallPreview .emptyState,
+.selectedWallPreview .placeholder {
+  display: none !important;
+}
+
+/* smaller filters/table */
+.showStationsFilters input,
+.showStationsFilters select,
+.showStationsToolbar input,
+.showStationsToolbar select {
+  height: 34px !important;
+  min-height: 34px !important;
+  font-size: 12px !important;
+}
+
+.stationsTable th,
+.stationsTable td {
+  padding: 5px 7px !important;
+  font-size: 11px !important;
+}
+
+/* ===========================
+   DEVICE MANAGER
+=========================== */
+
+.deviceManagerScreen,
+.deviceFullPanel {
+  padding: 10px !important;
+}
+
+.deviceSection {
+  padding: 10px !important;
+  margin-bottom: 6px !important;
+}
+
+.deviceSection h3 {
+  margin-bottom: 4px !important;
+}
+
+.deviceSection button {
+  height: 34px !important;
+  min-height: 34px !important;
+}
+
+/* remove extra empty spacing everywhere */
+.panel,
+.formPanel,
+.previewPanel,
+.modelPreviewPanel {
+  margin: 0 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
