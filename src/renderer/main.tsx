@@ -10,6 +10,7 @@ type Row = Record<string, any>;
 type Lang = 'he' | 'en';
 type DeviceStatus = { connected: boolean; portPath: string; message: string; version?: string };
 
+const APP_VERSION = '1.0';
 const DEVICE_STATE_KEY = 'c2m-device-state';
 
 function loadDeviceState(): any {
@@ -53,7 +54,7 @@ function errorText(error: any) {
 
 function noticeClass(message: string) {
   const text = String(message || '').toLowerCase();
-  if (/error|failed|cannot|not found|invalid|missing|timeout|exception|err\b|שגיאה|נכשל/.test(text)) {
+  if (/error|failed|cannot|not found|not detected|not connected|disconnected|invalid|missing|timeout|exception|err\b|שגיאה|נכשל/.test(text)) {
     return 'notice errorNotice';
   }
   if (/required|warning|warn|please|must|should|empty|select|enter|scan|חובה|אזהרה|נדרש/.test(text)) {
@@ -314,7 +315,7 @@ function GuidedWallSetup({ lang, deviceState, appSettings, onFinish }: {lang:Lan
     return <WallCreateForm
       lang={lang}
       onCancel={onFinish}
-      onCreated={(_, createdSerial)=>{setSerial(createdSerial);}}
+      onCreated={(_, createdSerial)=>{setSerial(createdSerial); setPhase('configure');}}
     />;
   }
   return <ConfigWall
@@ -767,13 +768,13 @@ function StationWallsVisual({ walls, t }: { walls: Row[]; t: any }) {
       {walls.map((w, i) => (
         <div className="linkedWallUnit" key={w.ChargingWallId}>
           <div className="linkedWallProps">
-            <div className="wallPropLine"><strong>Wall #{i}</strong></div>
+            <div className="wallPropLine"><strong>Wall #{i + 1}</strong></div>
             <div className="wallPropLine mono">{w.SerialNumber}</div>
             <div className="wallPropLine">{w.ModelInfo?.Model}</div>
             <div className="wallPropLine welcomeLine">{w.ModelInfo?.HasWelcomeScreen ? `Welcome: ${w.WelcomeScreenSerial || 'Missing'}` : '\u00A0'}</div>
             <em className={`statusPill ${statusClass(w.Status)}`}>{statusLabel(w.Status)}</em>
           </div>
-          <div className="linkedWallPreviewWrap"><WallPreview model={w.ModelInfo} t={t} compact/></div>
+          <div className="linkedWallPreviewWrap"><WallPreview model={w.ModelInfo} t={t}/></div>
         </div>
       ))}
     </div>
@@ -829,14 +830,16 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
         {stores.map(s=><option key={s.StoreId} value={s.StoreId}>{s.StoreName||s.Name||`Store ${s.StoreId}`}</option>)}
       </select>
       <label>Charging wall serial</label>
-      <ClearableTextInput inputRef={wallSerialRef} value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial" onEnter={findWall}/>
+      <div className="stationWallRow">
+        <ClearableTextInput inputRef={wallSerialRef} value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial" onEnter={findWall}/>
+        <button onClick={addWall} disabled={!currentWall}>{t.addWall}</button>
+      </div>
       {currentWall&&<div className="miniCard foundWallCard">
         <strong>{currentWall.SerialNumber}</strong>
         <span>{currentWall.ModelInfo?.Model}</span>
         <span className={`statusPill ${statusClass(currentWall.Status)}`}>Status: {statusLabel(currentWall.Status)}</span>
         {currentWall.ModelInfo?.HasWelcomeScreen&&<span>Welcome screen: {currentWall.WelcomeScreenSerial || 'Missing in DB'}</span>}
       </div>}
-      <button onClick={addWall} disabled={!currentWall}>{t.addWall}</button>
       <button className="secondary" onClick={submit} disabled={!storeId||!selectedWalls.length}>{t.submit}</button>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
       <div className="panelBottom"><BackHomeButton onClick={()=>onFinish?.()}/></div>
@@ -973,7 +976,7 @@ function DbViewer({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
             const failedSlots = (w.slots || []).filter((s:Row)=>statusToNumber(s.Status)===2).map((s:Row)=>Number(s.SlotNumber ?? s.slotNumber ?? s.RowNumber ?? 0)).filter(Boolean);
             return <div className="selectedWallCard" key={w.ChargingWallId || w.id || wallIndex}>
               <div className="selectedWallInfo">
-                <span><b>Wall #{wallIndex}</b></span>
+                <span><b>Wall #{wallIndex + 1}</b></span>
                 <span><b>Wall serial</b>{w.SerialNumber || w.serialNumber || '-'}</span>
                 <span><b>Model</b>{model?.Model || w.Model || '-'}</span>
                 <span><b>Welcome serial</b>{w.welcomeScreen?.SerialNumber || w.WelcomeScreenSerial || '-'}</span>
@@ -1486,7 +1489,7 @@ function SettingsWindow({ lang }: {lang:Lang}) {
 
   return <main className="settingsWindow" dir={lang==='he'?'rtl':'ltr'}>
     <div className="panel settingsPanel">
-      <h2>Settings</h2><div className="notice successNotice">Build version: 0.6</div>
+      <h2>Settings</h2><div className="notice successNotice">Build version: {APP_VERSION}</div>
       <div className="settingsGrid">
         <label>NFC / cell test timeout (ms)</label>
         <input type="number" value={settings.nfcActionTimeoutMs} onChange={e=>update('nfcActionTimeoutMs', Number(e.target.value))}/>
@@ -1769,7 +1772,7 @@ function App(){
       <section className="appContent">
         <DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
       </section>
-      <footer className="appFooter"><span>Version 0.9</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
+      <footer className="appFooter"><span>Version {APP_VERSION}</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
     </main>;
   }
 
@@ -1787,7 +1790,7 @@ function App(){
       {tab==='testSlot'&&<TestSpecificSlot lang={lang} onFinish={()=>setTab('home')}/>}
       {tab==='deviceManager'&&<section className="deviceManagerScreen"><BackHomeButton onClick={()=>setTab('home')}/><DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/></section>}
     </section>
-    <footer className="appFooter"><span>Version 0.9</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
+    <footer className="appFooter"><span>Version {APP_VERSION}</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
   </main>;
 }
 

@@ -1,6 +1,6 @@
 # Current Project State
 
-Current stable version: v0.9
+Current stable version: v1.0
 
 Main goals:
 - Compact UI

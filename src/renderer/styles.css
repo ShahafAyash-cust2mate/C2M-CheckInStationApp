@@ -3014,3 +3014,480 @@ input[readonly],
   padding-bottom: 10px !important;
 }
 
+/* v1.0 - 1920x1080 compact QA polish */
+main {
+  grid-template-rows: 64px minmax(0, 1fr) 34px !important;
+}
+
+.wireTopHeader {
+  height: 64px !important;
+  min-height: 64px !important;
+  padding: 4px 16px !important;
+  gap: 12px !important;
+}
+
+.wireBrand {
+  gap: 14px !important;
+}
+
+.wireBrand .brandLogo {
+  width: auto !important;
+  height: 40px !important;
+  max-width: 210px !important;
+}
+
+.wireDivider {
+  height: 38px !important;
+}
+
+.wireBrand h1 {
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+.wireHeaderControls {
+  gap: 6px !important;
+}
+
+.wireDevice {
+  width: 102px !important;
+  min-width: 102px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 5px 8px !important;
+  border-radius: 8px !important;
+  grid-template-columns: 14px 1fr !important;
+}
+
+.wireDevice span {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.wireDevice strong {
+  font-size: 12px !important;
+}
+
+.wireDevice small {
+  font-size: 9px !important;
+}
+
+.modeSwitch,
+.wireLang select {
+  height: 34px !important;
+  min-height: 34px !important;
+  border-radius: 8px !important;
+}
+
+.modeSwitch {
+  min-width: 58px !important;
+  padding: 0 10px !important;
+}
+
+.wireLang select {
+  width: 110px !important;
+  min-width: 110px !important;
+}
+
+.appFooter {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+}
+
+.appContent {
+  padding: 6px 12px !important;
+  overflow: hidden !important;
+}
+
+.pageGrid,
+.pageGrid.horizontalPage,
+.horizontalPage,
+.testSpecificSlotPage,
+.showStationsPage {
+  height: 100% !important;
+  min-height: 0 !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+.pageGrid,
+.pageGrid.horizontalPage,
+.horizontalPage,
+.testSpecificSlotPage {
+  grid-template-columns: minmax(360px, .72fr) minmax(760px, 1.9fr) !important;
+}
+
+.pageGrid > .panel,
+.pageGrid.horizontalPage > .panel,
+.horizontalPage > .panel,
+.testSpecificSlotPage > .panel,
+.formPanel,
+.previewPanel,
+.modelPreviewPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  overflow-x: hidden !important;
+}
+
+.formPanel {
+  overflow-y: auto !important;
+}
+
+.previewPanel {
+  overflow-y: hidden !important;
+}
+
+.modelPreviewPanel {
+  overflow-y: auto !important;
+}
+
+.panel h2,
+.formPanel h2,
+.previewPanel h2 {
+  font-size: 22px !important;
+  line-height: 1.1 !important;
+  margin: 0 0 6px !important;
+}
+
+.formPanel label {
+  margin: 4px 0 2px !important;
+  font-size: 12px !important;
+}
+
+button,
+select,
+input {
+  min-height: 32px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  padding: 0 10px !important;
+}
+
+.formPanel input,
+.formPanel select,
+.formPanel button,
+.rightPanelActions button {
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.formPanel button {
+  margin-top: 4px !important;
+}
+
+.notice {
+  margin-top: 6px !important;
+  padding: 7px 9px !important;
+  border-radius: 10px !important;
+  font-size: 12px !important;
+}
+
+.progress {
+  margin: 6px 0 !important;
+  padding: 6px !important;
+  font-size: 22px !important;
+}
+
+.panelBottom {
+  padding-top: 8px !important;
+}
+
+.backHomeBtn {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+}
+
+.wallWithSerials {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: max-content minmax(260px, 330px) !important;
+  gap: 14px !important;
+  align-items: start !important;
+  overflow: hidden !important;
+}
+
+.wallWithSerials .wallCanvas {
+  transform: none !important;
+}
+
+.wallWithSerials .wallBaseStrip {
+  height: 52px !important;
+}
+
+.nfcSerialList {
+  width: 100% !important;
+  min-width: 260px !important;
+  max-width: 330px !important;
+  max-height: 100% !important;
+  margin-top: 0 !important;
+  padding: 8px !important;
+  border-radius: 12px !important;
+  overflow: auto !important;
+}
+
+.nfcSerialList h3 {
+  margin: 0 0 6px !important;
+  font-size: 15px !important;
+}
+
+.nfcSerialRow {
+  grid-template-columns: 58px minmax(0, 1fr) 52px !important;
+  gap: 6px !important;
+  padding: 5px 7px !important;
+  margin-bottom: 4px !important;
+  font-size: 11px !important;
+}
+
+.slotStatus {
+  font-size: 10px !important;
+}
+
+.modelPreviewList {
+  grid-template-columns: repeat(2, minmax(360px, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.modelPreviewCard {
+  padding: 8px !important;
+}
+
+.modelPreviewCard .wallPreviewWithBase {
+  transform: scale(.88) !important;
+  transform-origin: top left !important;
+}
+
+.modelPreviewCard .wallCanvas,
+.modelPreviewCard .wallCanvasWrap {
+  transform: none !important;
+}
+
+.modelPreviewCard .wallPreviewWithBase {
+  height: 430px !important;
+}
+
+.modelPreviewCard .wallBaseStrip {
+  height: 46px !important;
+}
+
+.stationWallRow {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 122px !important;
+  gap: 8px !important;
+  align-items: end !important;
+}
+
+.stationWallRow .clearableInputWrap {
+  min-width: 0 !important;
+}
+
+.stationWallRow button {
+  width: 122px !important;
+  margin-top: 0 !important;
+}
+
+.foundWallCard {
+  margin-top: 6px !important;
+  padding: 8px !important;
+}
+
+.showStationsPage {
+  grid-template-columns: 190px minmax(0, 1fr) !important;
+}
+
+.showStationsVisual {
+  padding: 10px !important;
+}
+
+.showStationsVisual .stationIllustration {
+  transform: scale(.58) !important;
+  margin-top: 4px !important;
+}
+
+.showStationsPanel {
+  padding: 10px !important;
+  overflow: auto !important;
+}
+
+.showStationsToolbar {
+  margin-bottom: 6px !important;
+}
+
+.showStationsToolbar h2 {
+  margin: 0 !important;
+}
+
+.showStationsFilters {
+  grid-template-columns: minmax(260px, 1fr) 180px 180px !important;
+  gap: 6px !important;
+  margin-bottom: 6px !important;
+}
+
+.selectedStationPanel {
+  padding: 8px !important;
+  margin: 6px 0 !important;
+  overflow: hidden !important;
+}
+
+.selectedStationMeta {
+  margin-bottom: 6px !important;
+}
+
+.selectedStationWalls {
+  max-height: none !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.selectedWallCard {
+  width: 255px !important;
+}
+
+.selectedWallPreview {
+  min-height: 210px !important;
+}
+
+.selectedWallPreview .wallPreviewWithBase {
+  transform: scale(.78) !important;
+  transform-origin: top left !important;
+}
+
+.selectedWallPreview .wallCanvas,
+.selectedWallPreview .wallCanvasWrap {
+  transform: none !important;
+}
+
+.stationsTable th,
+.stationsTable td {
+  padding: 5px 7px !important;
+  font-size: 11px !important;
+}
+
+.eyeBtn {
+  min-height: 26px !important;
+  height: 26px !important;
+}
+
+.whatHappens {
+  display: none !important;
+}
+
+.deviceManagerOnePage {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+}
+
+.deviceFullPanel {
+  min-height: 100% !important;
+  padding: 10px !important;
+}
+
+.deviceManagerGrid {
+  gap: 8px !important;
+}
+
+.deviceSection {
+  padding: 8px 10px !important;
+  margin-bottom: 0 !important;
+  border-radius: 12px !important;
+}
+
+.deviceSection h3,
+.deviceSection h4 {
+  margin: 0 0 4px !important;
+}
+
+.deviceSection label {
+  margin: 4px 0 2px !important;
+}
+
+.deviceSection button {
+  height: 30px !important;
+  min-height: 30px !important;
+  margin-top: 4px !important;
+}
+
+.deviceSection .notice {
+  margin-top: 6px !important;
+}
+
+/* v1.0 visual QA refinements */
+.wireHomeContent {
+  height: auto !important;
+  align-items: start !important;
+  margin-top: 24px !important;
+}
+
+.wireProduct {
+  height: 430px !important;
+  max-height: 430px !important;
+}
+
+.modelPreviewCard .wallPreviewWithBase {
+  height: 520px !important;
+}
+
+.selectedStationPanel {
+  max-height: 610px !important;
+  overflow: auto !important;
+}
+
+.selectedWallPreview {
+  min-height: 310px !important;
+}
+
+.selectedWallPreview .wallPreviewWithBase {
+  height: 300px !important;
+  min-width: 260px !important;
+}
+
+.deviceManagerScreen {
+  height: 100% !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: 32px minmax(0, 1fr) !important;
+  gap: 6px !important;
+  overflow: hidden !important;
+}
+
+.deviceManagerScreen > .backHomeBtn {
+  align-self: start !important;
+}
+
+.deviceManagerScreen .deviceManagerOnePage {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.deviceManagerScreen .deviceFullPanel {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+}
+
+.deviceManagerScreen .deviceManagerGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+}
+
+.deviceManagerScreen .deviceManagerGrid .deviceSection:first-child {
+  grid-column: 1 / -1 !important;
+}
+
+.linkedWallPreviewWrap .wallCanvas {
+  transform: none !important;
+}
+
+.linkedWallPreviewWrap .wallPreviewWithBase {
+  height: auto !important;
+}
