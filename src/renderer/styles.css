@@ -3491,3 +3491,117 @@ input {
 .linkedWallPreviewWrap .wallPreviewWithBase {
   height: auto !important;
 }
+
+/* v1.1 selected station wall previews */
+.selectedStationWalls .linkedStationFrame {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.selectedStationWalls .linkedStationVisual {
+  gap: 0 !important;
+  column-gap: 0 !important;
+}
+
+.selectedStationWalls .linkedWallUnit {
+  margin: 0 !important;
+}
+
+.selectedStationWalls .linkedWallUnit + .linkedWallUnit {
+  margin-left: -1px !important;
+}
+
+.selectedStationWalls .linkedWallProps {
+  width: 190px !important;
+  min-width: 190px !important;
+  max-width: 190px !important;
+  height: 96px !important;
+  min-height: 96px !important;
+  max-height: 96px !important;
+  padding: 0 4px 6px !important;
+}
+
+.selectedStationWalls .linkedWallProps .wallPropLine {
+  width: 182px !important;
+  max-width: 182px !important;
+}
+
+.selectedStationWalls .linkedWallPreviewWrap {
+  overflow: visible !important;
+}
+
+/* v1.2 wall preview sizing at 1920x1080 */
+.modelPreviewList {
+  grid-template-columns: repeat(2, minmax(300px, 1fr)) !important;
+}
+
+.modelPreviewCard .wallPreviewWithBase {
+  transform: scale(.68) !important;
+  transform-origin: top left !important;
+  height: 405px !important;
+}
+
+.modelPreviewCard .wallBaseStrip {
+  height: 42px !important;
+}
+
+.wallWithSerials {
+  grid-template-columns: 340px minmax(260px, 330px) !important;
+  gap: 12px !important;
+}
+
+.wallWithSerials .wallPreviewWithBase {
+  transform: scale(.78) !important;
+  transform-origin: top left !important;
+  width: 340px !important;
+  height: 455px !important;
+}
+
+.wallWithSerials .wallCanvas,
+.wallWithSerials .wallCanvasWrap {
+  transform: none !important;
+}
+
+.wallWithSerials .wallBaseStrip {
+  height: 48px !important;
+}
+
+.selectedStationPanel {
+  max-height: 505px !important;
+  overflow: hidden !important;
+}
+
+.selectedStationWalls {
+  max-height: 295px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.selectedStationWalls .linkedWallProps {
+  width: 159px !important;
+  min-width: 159px !important;
+  max-width: 159px !important;
+  height: 86px !important;
+  min-height: 86px !important;
+  max-height: 86px !important;
+}
+
+.selectedStationWalls .linkedWallProps .wallPropLine {
+  width: 151px !important;
+  max-width: 151px !important;
+}
+
+.selectedStationWalls .linkedWallPreviewWrap {
+  width: 159px !important;
+  height: 220px !important;
+}
+
+.selectedStationWalls .linkedWallPreviewWrap .wallPreviewWithBase {
+  transform: scale(.62) !important;
+  transform-origin: top left !important;
+  height: 220px !important;
+}

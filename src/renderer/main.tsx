@@ -10,7 +10,7 @@ type Row = Record<string, any>;
 type Lang = 'he' | 'en';
 type DeviceStatus = { connected: boolean; portPath: string; message: string; version?: string };
 
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.6';
 const DEVICE_STATE_KEY = 'c2m-device-state';
 
 function loadDeviceState(): any {
@@ -208,20 +208,133 @@ function modelOptionLabel(m: Row) {
   return description ? `${model} - ${description}` : model;
 }
 
-function targetHasWelcomeScreenFromSerial(serial: string): boolean | null {
-  const s = String(serial || '').trim();
-  if (s.startsWith('11')) return false;
-  if (s.startsWith('12')) return true;
-  return null;
+const WALL_MODEL_BY_DESIGNATION: Record<string, { partNumber: string; hasWelcomeScreen: boolean; colorTokens: string[]; typeTokens: string[] }> = {
+  '11': { partNumber: 'C2M-403-G4-NS-WH', hasWelcomeScreen: false, colorTokens: ['WH', 'WHITE'], typeTokens: ['NS', 'WITHOUT SCREEN'] },
+  '12': { partNumber: 'C2M-403-G4-WS-WH', hasWelcomeScreen: true, colorTokens: ['WH', 'WHITE'], typeTokens: ['WS', 'WELCOME SCREEN'] },
+  '19': { partNumber: 'C2M-403-G4-NS-GR', hasWelcomeScreen: false, colorTokens: ['GR', 'GRAY', 'GREY'], typeTokens: ['NS', 'WITHOUT SCREEN'] },
+  '20': { partNumber: 'C2M-403-G4-WS-GR', hasWelcomeScreen: true, colorTokens: ['GR', 'GRAY', 'GREY'], typeTokens: ['WS', 'WELCOME SCREEN'] }
+};
+
+const MODEL_DESIGNATION_FIELDS = [
+  'ModelDesignation',
+  'modelDesignation',
+  'Designation',
+  'designation',
+  'SerialPrefix',
+  'serialPrefix',
+  'SerialNumberPrefix',
+  'serialNumberPrefix',
+  'BarcodePrefix',
+  'barcodePrefix',
+  'PcbaFg',
+  'pcbaFg',
+  'PCBAFG',
+  'PCBA_FG',
+  'ModelCode',
+  'modelCode'
+];
+
+function modelIdValue(model: Row | null) {
+  return model?.ChargingWallModelId ?? model?.chargingWallModelId ?? model?.Id ?? model?.id ?? '';
 }
 
-function bestModelForSerial(models: Row[], serial: string): Row | null {
-  const target = targetHasWelcomeScreenFromSerial(serial);
-  if (target === null) return null;
-  const matches = models.filter(m => Boolean(m?.HasWelcomeScreen) === target);
-  if (!matches.length) return null;
-  const preferredToken = target ? 'WS' : 'NS';
-  return matches.find(m => String(m?.Model || '').toUpperCase().includes(preferredToken)) || matches[0];
+function modelHasWelcomeScreen(model: Row | null) {
+  const value = model?.HasWelcomeScreen ?? model?.hasWelcomeScreen ?? false;
+  if (typeof value === 'string') return ['true', '1', 'yes'].includes(value.trim().toLowerCase());
+  return Boolean(value);
+}
+
+function serialDesignationFromSerial(serial: string): string | null {
+  const s = String(serial || '').trim();
+  return s.length >= 2 ? s.slice(0, 2).toUpperCase() : null;
+}
+
+function normalizeModelText(value: any) {
+  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function modelText(model: Row) {
+  const fields = [
+    model?.Model,
+    model?.model,
+    model?.PartNumber,
+    model?.partNumber,
+    model?.PN,
+    model?.pn,
+    model?.Description,
+    model?.description,
+    model?.Name,
+    model?.name,
+    model?.DisplayName,
+    model?.displayName,
+    model?.SerialNumberFormat,
+    model?.serialNumberFormat,
+    model?.SNFormat,
+    model?.snFormat
+  ];
+  return normalizeModelText(fields.filter(v => v !== undefined && v !== null).join(' '));
+}
+
+function textHasToken(text: string, token: string) {
+  const normalized = normalizeModelText(token);
+  return Boolean(normalized) && (` ${text} `).includes(` ${normalized} `);
+}
+
+function textContainsPhrase(text: string, phrase: string) {
+  const normalized = normalizeModelText(phrase);
+  return Boolean(normalized) && text.includes(normalized);
+}
+
+function designationValueMatches(value: any, designation: string) {
+  const text = String(value ?? '').trim().toUpperCase();
+  if (!text) return false;
+  if (text === designation) return true;
+  return new RegExp(`(^|[^0-9])${designation}([^0-9]|$)`).test(text);
+}
+
+function modelHasDedicatedDesignationField(model: Row) {
+  return MODEL_DESIGNATION_FIELDS.some(field => model?.[field] !== undefined && String(model?.[field] ?? '').trim() !== '');
+}
+
+function dedicatedDesignationMatches(model: Row, designation: string) {
+  return MODEL_DESIGNATION_FIELDS.some(field => designationValueMatches(model?.[field], designation));
+}
+
+function modelDataContainsDesignation(model: Row, designation: string) {
+  return [
+    model?.SerialNumberFormat,
+    model?.serialNumberFormat,
+    model?.SNFormat,
+    model?.snFormat,
+    model?.SerialFormat,
+    model?.serialFormat
+  ].some(value => designationValueMatches(value, designation));
+}
+
+function modelDataMatchesDesignation(model: Row, designation: string) {
+  const rule = WALL_MODEL_BY_DESIGNATION[designation];
+  if (!rule) return false;
+  if (modelDataContainsDesignation(model, designation)) return true;
+  const text = modelText(model);
+  if (textContainsPhrase(text, rule.partNumber)) return true;
+
+  const colorMatches = rule.colorTokens.some(token => textHasToken(text, token));
+  const typeMatches = rule.typeTokens.some(token => textContainsPhrase(text, token));
+  const welcomeMatches = modelHasWelcomeScreen(model) === rule.hasWelcomeScreen;
+  return colorMatches && (typeMatches || welcomeMatches);
+}
+
+function modelForSerialDesignation(models: Row[], serial: string): { designation: string | null; model: Row | null; source: 'none' | 'dedicated' | 'model-data' | 'unknown' } {
+  const designation = serialDesignationFromSerial(serial);
+  if (!designation) return { designation: null, model: null, source: 'none' };
+
+  const dedicatedModels = models.filter(modelHasDedicatedDesignationField);
+  if (dedicatedModels.length) {
+    return { designation, model: dedicatedModels.find(m => dedicatedDesignationMatches(m, designation)) || null, source: 'dedicated' };
+  }
+
+  if (!WALL_MODEL_BY_DESIGNATION[designation]) return { designation, model: null, source: 'unknown' };
+  return { designation, model: models.find(m => modelDataMatchesDesignation(m, designation)) || null, source: 'model-data' };
 }
 
 
@@ -237,39 +350,94 @@ function WallCreateForm({
   const t=i18n[lang];
   const serialRef = useRef<HTMLInputElement>(null);
   const screenRef = useRef<HTMLInputElement>(null);
+  const modelSelectRef = useRef<HTMLSelectElement>(null);
+  const saveButtonRef = useRef<HTMLButtonElement>(null);
   const [models,setModels]=useState<Row[]>([]);
   const [serial,setSerial]=useState('');
   const [screenSerial,setScreenSerial]=useState('');
   const [modelId,setModelId]=useState('');
   const [msg,setMsg]=useState('');
+  const [modelWarning,setModelWarning]=useState('');
+  const [manualModelSerialKey,setManualModelSerialKey]=useState('');
 
   useEffect(()=>{setTimeout(()=>serialRef.current?.focus(),0);},[]);
   useEffect(()=>{
     window.cloudApi.getWallModels()
-      .then((m:Row[])=>{setModels(m); if(m[0]) setModelId(String(m[0].ChargingWallModelId));})
+      .then((m:Row[])=>setModels(m))
       .catch((e:any)=>setMsg(errorText(e)));
   },[]);
   useEffect(()=>{
-    const autoModel = bestModelForSerial(models, serial);
-    if (autoModel) {
-      setModelId(String(autoModel.ChargingWallModelId));
-      if (Boolean(autoModel.HasWelcomeScreen)) setTimeout(()=>screenRef.current?.focus(),0);
+    const serialKey = String(serial || '').trim().toUpperCase();
+    if (!serialKey || serialKey.length < 2) {
+      setModelWarning('');
+      return;
     }
-  }, [serial, models]);
+    if (!models.length) return;
+    if (manualModelSerialKey === serialKey) return;
 
-  const serialModelTarget = targetHasWelcomeScreenFromSerial(serial);
-  const visibleModels = serialModelTarget === null ? models : models.filter(m => Boolean(m?.HasWelcomeScreen) === serialModelTarget);
-  const model=models.find(m=>String(m.ChargingWallModelId)===modelId)||null;
+    const match = modelForSerialDesignation(models, serial);
+    if (match.model) {
+      setModelId(String(modelIdValue(match.model)));
+      setModelWarning('');
+      if (modelHasWelcomeScreen(match.model)) setTimeout(()=>screenRef.current?.focus(),0);
+      return;
+    }
+
+    setModelId('');
+    if (match.source === 'unknown' || !WALL_MODEL_BY_DESIGNATION[match.designation || '']) {
+      setModelWarning('Unknown serial prefix, please select wall model manually.');
+    } else {
+      setModelWarning(`No cloud wall model matches serial prefix ${match.designation}, please select wall model manually.`);
+    }
+  }, [serial, models, manualModelSerialKey]);
+
+  const serialDesignation = serialDesignationFromSerial(serial);
+  const model=models.find(m=>String(modelIdValue(m))===modelId)||null;
+  const selectedModelId = modelIdValue(model);
+  const selectedModelHasWelcomeScreen = modelHasWelcomeScreen(model);
+
+  function handleSerialEnter() {
+    const serialKey = String(serial || '').trim().toUpperCase();
+    if (!serialKey || serialKey.length < 2) {
+      setTimeout(()=>modelSelectRef.current?.focus(),0);
+      return;
+    }
+    const match = modelForSerialDesignation(models, serial);
+    const matchedModel = match.model || null;
+    if (matchedModel) {
+      setModelId(String(modelIdValue(matchedModel)));
+      setModelWarning('');
+      setManualModelSerialKey('');
+    } else {
+      setModelId('');
+      setManualModelSerialKey('');
+      if (match.source === 'unknown' || !WALL_MODEL_BY_DESIGNATION[match.designation || '']) {
+        setModelWarning('Unknown serial prefix, please select wall model manually.');
+      } else {
+        setModelWarning(`No cloud wall model matches serial prefix ${match.designation}, please select wall model manually.`);
+      }
+    }
+    const nextModel = matchedModel || model;
+    if (modelHasWelcomeScreen(nextModel)) {
+      setTimeout(()=>screenRef.current?.focus(),0);
+      return;
+    }
+    setTimeout(()=>modelSelectRef.current?.focus(),0);
+  }
+
+  function handleWelcomeSerialEnter() {
+    setTimeout(()=>saveButtonRef.current?.focus(),0);
+  }
 
   async function submit(){
     setMsg('');
     try {
       if (!serial.trim()) throw new Error('Scan charging wall serial first');
-      if (!modelId) throw new Error('Choose wall model');
-      if (model?.HasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen serial is required');
+      if (!model || !selectedModelId) throw new Error('Choose wall model');
+      if (selectedModelHasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen serial is required');
       const row=await window.cloudApi.createWall({
         SerialNumber:serial.trim(),
-        ChargingWallModelId:Number(modelId),
+        ChargingWallModelId:Number(selectedModelId),
         WelcomeScreenSerialNumber:screenSerial.trim()||null
       });
       setMsg(`ChargingWallId: ${row.ChargingWallId}`);
@@ -284,22 +452,26 @@ function WallCreateForm({
     <div className="panel formPanel">
       <h2>Set up new wall</h2>
 <label>{t.serial}</label>
-      <ClearableTextInput inputRef={serialRef} autoFocus value={serial} onChange={setSerial} placeholder={t.serial} onEnter={()=>model?.HasWelcomeScreen ? screenRef.current?.focus() : submit()}/>
+      <ClearableTextInput inputRef={serialRef} autoFocus value={serial} onChange={(value)=>{ setSerial(value); if (manualModelSerialKey && String(value || '').trim().toUpperCase() !== manualModelSerialKey) setManualModelSerialKey(''); }} placeholder={t.serial} onEnter={handleSerialEnter}/>
       <label>{t.wallModel}</label>
-      <div className="readonlyField">{model ? modelOptionLabel(model) : 'Scan wall serial to auto-detect model'}</div>
-      {serialModelTarget!==null&&<div className="fieldHint">Model auto-selected by barcode prefix: {serial.trim().startsWith('11')?'11 = without welcome screen':'12 = with welcome screen'}</div>}
-      {model?.HasWelcomeScreen&&<>
+      <select ref={modelSelectRef} value={modelId} onChange={e=>{setModelId(e.target.value); if(e.target.value){ setModelWarning(''); setManualModelSerialKey(String(serial || '').trim().toUpperCase()); } else { setManualModelSerialKey(''); }}}>
+        <option value="">Select wall model</option>
+        {models.map((m:Row)=><option key={modelIdValue(m) || m.Model} value={String(modelIdValue(m))}>{modelOptionLabel(m)}</option>)}
+      </select>
+      {serialDesignation&&model&&!modelWarning&&<div className="fieldHint">Model selected by serial prefix: {serialDesignation}</div>}
+      {modelWarning&&<div className="notice warningNotice">{modelWarning}</div>}
+      {selectedModelHasWelcomeScreen&&<>
         <label>{t.welcomeSerial}</label>
-        <ClearableTextInput inputRef={screenRef} value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial} onEnter={submit}/>
+        <ClearableTextInput inputRef={screenRef} value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial} onEnter={handleWelcomeSerialEnter}/>
       </>}
-      <button className="primary fullWidthAction" onClick={submit}>Save wall to cloud</button>
+      <button ref={saveButtonRef} className="primary fullWidthAction" onClick={submit}>Save wall to cloud</button>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
       <div className="panelBottom"><BackHomeButton onClick={()=>onCancel?.()}/></div>
     </div>
     <div className="panel previewPanel modelPreviewPanel">
       <h2>{t.modelPreview}</h2>
       <div className="modelPreviewList">
-        {(visibleModels.length ? visibleModels : models).length ? (visibleModels.length ? visibleModels : models).map((m:Row)=><div key={m.ChargingWallModelId || m.Model} className={`modelPreviewCard ${String(m.ChargingWallModelId)===String(modelId)?'selected':''}`}>
+        {models.length ? models.map((m:Row)=><div key={modelIdValue(m) || m.Model} className={`modelPreviewCard ${String(modelIdValue(m))===String(modelId)?'selected':''}`}>
           <h3>{modelOptionLabel(m)}</h3>
           <WallPreview model={m} t={t}/>
         </div>) : <div className="emptyState">No wall models loaded</div>}
@@ -444,6 +616,157 @@ function normalizeCloudSlots(payload: any): Row[] {
     ColumnNumber: Number(s.ColumnNumber ?? s.columnNumber ?? s.column_number ?? 0),
     Status: statusToNumber(s.Status ?? s.status ?? 0)
   }));
+}
+
+function embeddedWallModel(wall: Row, models: Row[] = []): Row | null {
+  const embedded = [wall?.ModelInfo, wall?.modelInfo, wall?.model].find((m:any) => m && typeof m === 'object');
+  if (embedded) return embedded as Row;
+  const modelId = wall?.ChargingWallModelId ?? wall?.chargingWallModelId ?? wall?.ModelId ?? wall?.modelId;
+  return models.find((m:Row)=>String(m.ChargingWallModelId ?? m.id)===String(modelId)) || null;
+}
+
+function welcomeSerialForWall(wall: Row, welcomeScreen?: Row | null): string {
+  return String(
+    wall?.WelcomeScreenSerial ??
+    wall?.welcomeScreenSerial ??
+    welcomeScreen?.SerialNumber ??
+    welcomeScreen?.serialNumber ??
+    ''
+  ).trim();
+}
+
+function normalizeWallSlotsForModel(payload: any, model: Row | null): Row[] {
+  const raw = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.Slots)
+      ? payload.Slots
+      : Array.isArray(payload?.slots)
+        ? payload.slots
+        : [];
+  const slots = normalizeCloudSlots(raw);
+  const columnCount = Number(model?.ColumnCount ?? model?.columnCount ?? 0);
+  return slots.map((slot, index) => {
+    const rawSlot = raw[index] || slot;
+    const explicitSlot = Number(rawSlot.SlotNumber ?? rawSlot.slotNumber ?? rawSlot.slot_number);
+    const rowNumber = Number(slot.RowNumber ?? rawSlot.RowNumber ?? rawSlot.rowNumber ?? rawSlot.row_number);
+    const columnNumber = Number(slot.ColumnNumber ?? rawSlot.ColumnNumber ?? rawSlot.columnNumber ?? rawSlot.column_number);
+    const computedSlot = columnCount > 0 && Number.isFinite(rowNumber) && Number.isFinite(columnNumber)
+      ? rowNumber * columnCount + columnNumber + 1
+      : index + 1;
+    return {
+      ...slot,
+      SlotNumber: Number.isFinite(explicitSlot) && explicitSlot > 0 ? explicitSlot : computedSlot,
+      RowNumber: Number.isFinite(rowNumber) ? rowNumber : slot.RowNumber,
+      ColumnNumber: Number.isFinite(columnNumber) ? columnNumber : slot.ColumnNumber
+    };
+  });
+}
+
+function defaultTestWallModel(): Row {
+  return { RowCount: 4, ColumnCount: 5, HasWelcomeScreen: false };
+}
+
+async function runSlotHardwareTest({
+  item,
+  expectedSerial,
+  appSettings,
+  nfcPort,
+  arduinoPort,
+  setMsg,
+  setCountdownMs,
+  validateBeforeTest,
+  openWallAfterPass = true,
+}: {
+  item: Row;
+  expectedSerial: string;
+  appSettings: any;
+  nfcPort: string;
+  arduinoPort: string;
+  setMsg: (message: string) => void;
+  setCountdownMs: (value: number | null) => void;
+  validateBeforeTest?: () => Promise<void>;
+  openWallAfterPass?: boolean;
+}): Promise<{ success: boolean; message: string; item: Row }> {
+  const testedItem = { ...item };
+  const slotNumber = Number(testedItem.SlotNumber || 0);
+  const expected = String(expectedSerial ?? '');
+  const ledHoldMs = Math.max(0, Number(appSettings?.openWallDurationSec ?? 10) * 1000);
+
+  async function finish(success: boolean, message: string) {
+    setCountdownMs(null);
+    setTimeout(() => { safeTurnAllLedsOff(arduinoPort); }, ledHoldMs);
+    return { success, message, item: testedItem };
+  }
+
+  try {
+    await validateBeforeTest?.();
+
+    // The real cell test always starts from a neutral LED state.
+    await safeTurnAllLedsOff(arduinoPort);
+
+    setMsg(`Slot ${slotNumber}: checking charging...`);
+    const charged = await retryUntil(
+      Number(appSettings?.chargeDetectTimeoutMs || 10000),
+      setCountdownMs,
+      async () => window.arduinoApi.isCharging(arduinoPort),
+      (r:any) => Boolean(r?.charging)
+    );
+    setCountdownMs(null);
+
+    if (!charged?.charging) {
+      await safeTurnTopLedRed(arduinoPort);
+      return await finish(false, `Slot ${slotNumber} failed: charging was not detected`);
+    }
+
+    await safeTurnTopLedGreen(arduinoPort);
+
+    setMsg(`Slot ${slotNumber}: writing NFC serial ${expected || '(empty)'}...`);
+    const wrote = await retryUntil(
+      Number(appSettings?.nfcActionTimeoutMs || 10000),
+      setCountdownMs,
+      async () => window.nfcApi.writeTag(nfcPort, expected, { timeoutMs: 900 }),
+      (r:any) => Boolean(r?.uid || r?.ok)
+    );
+    setCountdownMs(null);
+
+    if (!wrote?.uid && !wrote?.ok) {
+      await safeTurnHandleLedRed(arduinoPort);
+      return await finish(false, `Slot ${slotNumber} failed: NFC write did not succeed`);
+    }
+
+    setMsg(`Slot ${slotNumber}: reading NFC tag and comparing...`);
+    const read = await retryUntil(
+      Number(appSettings?.nfcActionTimeoutMs || 10000),
+      setCountdownMs,
+      async () => window.nfcApi.readTag(nfcPort, { timeoutMs: 900 }),
+      (r:any) => String(r?.userText ?? r?.text ?? '') === expected
+    );
+    setCountdownMs(null);
+
+    const actualSerial = String(read?.userText ?? read?.text ?? '');
+    if (actualSerial !== expected) {
+      await safeTurnHandleLedRed(arduinoPort);
+      return await finish(false, `Slot ${slotNumber} failed: NFC mismatch. Expected ${expected}, read ${actualSerial || '(empty)'}`);
+    }
+
+    testedItem.NFCId = String(read?.uid || wrote?.uid || '').trim();
+    testedItem.NFCTag = actualSerial;
+    testedItem.NFCCode = actualSerial;
+
+    await safeTurnHandleLedGreen(arduinoPort);
+    if (openWallAfterPass) {
+      const openWallDurationSec = Math.max(1, Math.min(99, Number(appSettings?.openWallDurationSec ?? 10)));
+      setMsg(`Slot ${slotNumber} NFC passed. Opening wall for ${openWallDurationSec} seconds...`);
+      await safeOpenWall(arduinoPort, openWallDurationSec * 1000);
+    }
+
+    return await finish(true, `Slot ${slotNumber} passed`);
+  } catch (err:any) {
+    setCountdownMs(null);
+    await safeTurnTopLedRed(arduinoPort);
+    await safeTurnHandleLedRed(arduinoPort);
+    return await finish(false, `Slot ${slotNumber} failed: ${errorText(err)}`);
+  }
 }
 
 function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind=false, guidedTitle, onBack, onFinish }: {lang:Lang; deviceState:any; appSettings:any; initialSerial?:string; autoFind?:boolean; guidedTitle?:string; onBack?:()=>void; onFinish?:()=>void}) {
@@ -595,16 +918,16 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
     const nfcPort = ports.nfcPort;
     const expectedSerial = String(item.NFCTag || item.NFCCode || '').trim();
 
-    async function finishSlot(success: boolean, message: string) {
+    async function finishSlot(success: boolean, message: string, testedItem: Row) {
       const slotStatus = success ? 1 : 2;
       if (success) {
-        setPassed(p => Array.from(new Set([...p, item.SlotNumber])));
-        setFailed(f => f.filter(x => x !== item.SlotNumber));
+        setPassed(p => Array.from(new Set([...p, testedItem.SlotNumber])));
+        setFailed(f => f.filter(x => x !== testedItem.SlotNumber));
       } else {
-        setFailed(f => Array.from(new Set([...f, item.SlotNumber])));
-        setPassed(p => p.filter(x => x !== item.SlotNumber));
+        setFailed(f => Array.from(new Set([...f, testedItem.SlotNumber])));
+        setPassed(p => p.filter(x => x !== testedItem.SlotNumber));
       }
-      const updatedAlloc = alloc.map(s => s.SlotNumber === item.SlotNumber ? { ...s, NFCId: item.NFCId || s.NFCId || '', NFCTag: item.NFCTag || item.NFCCode || s.NFCTag || s.NFCCode || '', NFCCode: item.NFCTag || item.NFCCode || s.NFCTag || s.NFCCode || '', Status: slotStatus } : s);
+      const updatedAlloc = alloc.map(s => s.SlotNumber === testedItem.SlotNumber ? { ...s, NFCId: testedItem.NFCId || s.NFCId || '', NFCTag: testedItem.NFCTag || testedItem.NFCCode || s.NFCTag || s.NFCCode || '', NFCCode: testedItem.NFCTag || testedItem.NFCCode || s.NFCTag || s.NFCCode || '', Status: slotStatus } : s);
       setAlloc(updatedAlloc);
       try {
         await window.cloudApi.saveWallConfiguration({
@@ -615,85 +938,20 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
         });
       } catch {}
       setMsg(message);
-      const ledHoldMs = Math.max(0, Number(appSettings?.openWallDurationSec ?? 10) * 1000);
-      setTimeout(() => { safeTurnAllLedsOff(arduinoPort); }, ledHoldMs);
       return success;
     }
 
-    try {
-      await validateScreenIfNeeded();
-
-      // The user pressed OK in the popup, so the cell test starts now.
-      // Always start every cell with both LEDs off.
-      await safeTurnAllLedsOff(arduinoPort);
-
-      setMsg(`Slot ${item.SlotNumber}: checking charging...`);
-      const charged = await retryUntil(
-        Number(appSettings?.chargeDetectTimeoutMs || 10000),
-        setCountdownMs,
-        async () => window.arduinoApi.isCharging(arduinoPort),
-        (r:any) => Boolean(r?.charging)
-      );
-      setCountdownMs(null);
-
-      if (!charged?.charging) {
-        await safeTurnTopLedRed(arduinoPort);
-        return await finishSlot(false, `Slot ${item.SlotNumber} failed: charging was not detected`);
-      }
-
-      // Charging passed -> top LED green.
-      await safeTurnTopLedGreen(arduinoPort);
-
-      setMsg(`Slot ${item.SlotNumber}: writing NFC serial ${expectedSerial}...`);
-      const wrote = await retryUntil(
-        Number(appSettings?.nfcActionTimeoutMs || 10000),
-        setCountdownMs,
-        async () => window.nfcApi.writeTag(nfcPort, expectedSerial, { timeoutMs: 900 }),
-        (r:any) => Boolean(r?.uid)
-      );
-      setCountdownMs(null);
-
-      if (!wrote?.uid) {
-        await safeTurnHandleLedRed(arduinoPort);
-        return await finishSlot(false, `Slot ${item.SlotNumber} failed: NFC write did not succeed`);
-      }
-
-      setMsg(`Slot ${item.SlotNumber}: reading NFC tag and comparing...`);
-      const read = await retryUntil(
-        Number(appSettings?.nfcActionTimeoutMs || 10000),
-        setCountdownMs,
-        async () => window.nfcApi.readTag(nfcPort, { timeoutMs: 900 }),
-        (r:any) => String(r?.userText || '').trim() === expectedSerial
-      );
-      setCountdownMs(null);
-
-      const actualSerial = String(read?.userText || '').trim();
-      if (actualSerial !== expectedSerial) {
-        await safeTurnHandleLedRed(arduinoPort);
-        return await finishSlot(false, `Slot ${item.SlotNumber} failed: NFC mismatch. Expected ${expectedSerial}, read ${actualSerial || '(empty)'}`);
-      }
-
-      // NFC write+read passed -> save sticker UID and tag, then handle LED green.
-      const readUid = String(read?.uid || wrote?.uid || '').trim();
-      const readTag = actualSerial;
-      item.NFCId = readUid;
-      item.NFCTag = readTag;
-      item.NFCCode = readTag;
-      setAlloc(prev => prev.map(s => s.SlotNumber === item.SlotNumber ? { ...s, NFCId: readUid, NFCTag: readTag, NFCCode: readTag } : s));
-      // Open the wall immediately after the NFC test passes.
-      await safeTurnHandleLedGreen(arduinoPort);
-      const openWallDurationSec = Math.max(1, Math.min(99, Number(appSettings?.openWallDurationSec ?? 10)));
-      setMsg(`Slot ${item.SlotNumber} NFC passed. Opening wall for ${openWallDurationSec} seconds...`);
-      await safeOpenWall(arduinoPort, openWallDurationSec * 1000);
-
-      // At this point both LEDs are green. Keep them on for 5 seconds, then turn both off.
-      return await finishSlot(true, `Slot ${item.SlotNumber} passed`);
-    } catch (err:any) {
-      setCountdownMs(null);
-      await safeTurnTopLedRed(arduinoPort);
-      await safeTurnHandleLedRed(arduinoPort);
-      return await finishSlot(false, `Slot ${item.SlotNumber} failed: ${errorText(err)}`);
-    }
+    const result = await runSlotHardwareTest({
+      item,
+      expectedSerial,
+      appSettings,
+      nfcPort,
+      arduinoPort,
+      setMsg,
+      setCountdownMs,
+      validateBeforeTest: validateScreenIfNeeded
+    });
+    return await finishSlot(result.success, result.message, result.item);
   }
 
   async function save(){
@@ -761,22 +1019,26 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
 }
 
 
-function StationWallsVisual({ walls, t }: { walls: Row[]; t: any }) {
+function StationWallsVisual({ walls, t, compact=false }: { walls: Row[]; t: any; compact?: boolean }) {
   if (!walls.length) return <div className="emptyState small">Add charging walls to preview the station.</div>;
   return <div className="linkedStationFrame">
     <div className="linkedStationVisual">
-      {walls.map((w, i) => (
-        <div className="linkedWallUnit" key={w.ChargingWallId}>
+      {walls.map((w, i) => {
+        const model = embeddedWallModel(w) || null;
+        const slots = normalizeWallSlotsForModel(w.Slots || w.slots || [], model);
+        const passedSlots = slots.filter((s:Row)=>statusToNumber(s.Status)===1).map((s:Row)=>Number(s.SlotNumber)).filter(Boolean);
+        const failedSlots = slots.filter((s:Row)=>statusToNumber(s.Status)===2).map((s:Row)=>Number(s.SlotNumber)).filter(Boolean);
+        return <div className="linkedWallUnit" key={w.ChargingWallId || w.id || i}>
           <div className="linkedWallProps">
             <div className="wallPropLine"><strong>Wall #{i + 1}</strong></div>
-            <div className="wallPropLine mono">{w.SerialNumber}</div>
-            <div className="wallPropLine">{w.ModelInfo?.Model}</div>
-            <div className="wallPropLine welcomeLine">{w.ModelInfo?.HasWelcomeScreen ? `Welcome: ${w.WelcomeScreenSerial || 'Missing'}` : '\u00A0'}</div>
+            <div className="wallPropLine mono">{w.SerialNumber || w.serialNumber || '-'}</div>
+            <div className="wallPropLine">{model?.Model || w.Model || '-'}</div>
+            <div className="wallPropLine welcomeLine">{model?.HasWelcomeScreen ? `Welcome: ${w.WelcomeScreenSerial || w.welcomeScreenSerial || 'Missing'}` : '\u00A0'}</div>
             <em className={`statusPill ${statusClass(w.Status)}`}>{statusLabel(w.Status)}</em>
           </div>
-          <div className="linkedWallPreviewWrap"><WallPreview model={w.ModelInfo} t={t}/></div>
-        </div>
-      ))}
+          <div className="linkedWallPreviewWrap"><WallPreview model={model} t={t} compact={compact} completedSlots={passedSlots} failedSlots={failedSlots}/></div>
+        </div>;
+      })}
     </div>
   </div>;
 }
@@ -851,16 +1113,40 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
   </section>;
 }
 
-function TestSpecificSlot({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
+function TestSpecificSlot({ lang, deviceState, appSettings, onFinish }: {lang:Lang; deviceState:any; appSettings:any; onFinish:()=>void}) {
   const t = i18n[lang];
   const slotRef = useRef<HTMLInputElement>(null);
+  const wallSerialRef = useRef<HTMLInputElement>(null);
   const [nfcWriteText, setNfcWriteText] = useState('');
+  const [wallSerial, setWallSerial] = useState('');
   const [selectedSlot, setSelectedSlot] = useState<number>(1);
   const [msg, setMsg] = useState('');
+  const [testWall, setTestWall] = useState<any>(null);
+  const [passed, setPassed] = useState<number[]>([]);
+  const [failed, setFailed] = useState<number[]>([]);
+  const [countdownMs, setCountdownMs] = useState<number|null>(null);
+  const [busy, setBusy] = useState(false);
+  const wallAutoLoadRef = useRef('');
 
   useEffect(()=>{ setTimeout(()=>slotRef.current?.focus(),0); },[]);
+  useEffect(()=>{
+    const serial = wallSerial.trim();
+    if (!serial) {
+      wallAutoLoadRef.current = '';
+      setTestWall(null);
+      return;
+    }
+    if (serial.length < 6 || serial === wallAutoLoadRef.current) return;
+    const timer = setTimeout(()=>{ wallAutoLoadRef.current = serial; loadWallContext(serial); }, 350);
+    return ()=>clearTimeout(timer);
+  }, [wallSerial]);
+  useEffect(()=>{
+    const slotText = slotTextForSelectedSlot();
+    if (slotText !== null) setNfcWriteText(slotText);
+  }, [selectedSlot, testWall]);
 
   function chooseSlot(slotNumber: number) {
+    if (busy) return;
     setSelectedSlot(slotNumber);
     setMsg(`Selected slot ${slotNumber}`);
   }
@@ -870,35 +1156,192 @@ function TestSpecificSlot({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
     if (Number.isFinite(num) && num >= 1 && num <= 99) setSelectedSlot(num);
   }
 
-  function action(name: string) {
-    if (!selectedSlot) {
-      setMsg('Select a slot first');
+  function slotTextForSelectedSlot(): string | null {
+    if (!testWall?.slots?.length) return null;
+    const slot = testWall.slots.find((s:Row)=>Number(s.SlotNumber)===Number(selectedSlot));
+    if (!slot) return '';
+    return String(slot.NFCTag ?? slot.NFCCode ?? '');
+  }
+
+  async function loadWallContext(serialOverride?: string) {
+    const serial = String(serialOverride ?? wallSerial).trim();
+    if (!serial) {
+      setTestWall(null);
+      setMsg('Wall serial is optional. Local tests can run without a selected wall.');
       return;
     }
-    setMsg(`${name} requested for slot ${selectedSlot}${name==='Write NFC' && nfcWriteText ? ` with value: ${nfcWriteText}` : ''}`);
+    try {
+      setMsg('');
+      const db = await window.cloudApi.getDb();
+      const walls = db.ChargingWalls || [];
+      const models = db.ChargingWallModels || [];
+      const allSlots = db.ChargingSlots || [];
+      const welcomeScreens = db.WelcomeScreens || [];
+      const wall = walls.find((w:Row)=>String(w.SerialNumber || w.serialNumber || '').trim().toUpperCase()===serial.toUpperCase());
+      if (!wall) throw new Error(`Charging wall serial was not found: ${serial}`);
+      const model = embeddedWallModel(wall, models);
+      const wallId = wall.ChargingWallId ?? wall.id;
+      const welcomeScreen = welcomeScreens.find((ws:Row)=>String(ws.ChargingWallId ?? ws.chargingWallId)===String(wallId)) || null;
+      const rawSlots = Array.isArray(wall.Slots) && wall.Slots.length
+        ? wall.Slots
+        : allSlots.filter((s:Row)=>String(s.ChargingWallId ?? s.chargingWallId)===String(wallId));
+      const slots = normalizeWallSlotsForModel(rawSlots, model);
+      setTestWall({ wallId, wall, model, slots, welcomeSerial: welcomeSerialForWall(wall, welcomeScreen) });
+      setMsg(`Loaded wall ${wall.SerialNumber || wall.serialNumber || serial}`);
+    } catch (e:any) {
+      setTestWall(null);
+      setMsg(errorText(e));
+    }
   }
+
+  function getPorts(requireNfc: boolean, requireArduino: boolean) {
+    const nfcPort = window.__c2mNfcPort || deviceState?.nfc?.portPath || '';
+    const arduinoPort = window.__c2mArduinoPort || deviceState?.arduino?.portPath || '';
+    if (requireNfc && (!nfcPort || !deviceState?.nfc?.connected)) {
+      setMsg('NFC device is not connected. Connect NFC before testing.');
+      return null;
+    }
+    if (requireArduino && (!arduinoPort || !deviceState?.arduino?.connected)) {
+      setMsg('Arduino device is not connected. Connect Arduino before testing.');
+      return null;
+    }
+    return { nfcPort, arduinoPort };
+  }
+
+  function testSlotItem(): Row {
+    const model = testWall?.model || defaultTestWallModel();
+    const wallSlot = (testWall?.slots || []).find((s:Row)=>Number(s.SlotNumber)===Number(selectedSlot));
+    if (wallSlot) return { ...wallSlot, NFCTag: nfcWriteText, NFCCode: nfcWriteText };
+    const cols = Math.max(1, Number(model?.ColumnCount || 5));
+    return {
+      SlotNumber: selectedSlot,
+      RowNumber: Math.floor((Number(selectedSlot) - 1) / cols),
+      ColumnNumber: (Number(selectedSlot) - 1) % cols,
+      NFCTag: nfcWriteText,
+      NFCCode: nfcWriteText,
+      Status: 0
+    };
+  }
+
+  async function testSlot() {
+    if (!selectedSlot) return setMsg('Select a slot first');
+    const ports = getPorts(true, true);
+    if (!ports) return;
+    const item = testSlotItem();
+    const expectedSerial = nfcWriteText;
+    setBusy(true);
+    setPassed([]);
+    setFailed([]);
+    try {
+      const result = await runSlotHardwareTest({
+        item,
+        expectedSerial,
+        appSettings,
+        nfcPort: ports.nfcPort,
+        arduinoPort: ports.arduinoPort,
+        setMsg,
+        setCountdownMs,
+        openWallAfterPass: false
+      });
+      if (result.success) {
+        setPassed([Number(result.item.SlotNumber)]);
+        setFailed([]);
+      } else {
+        setFailed([Number(result.item.SlotNumber)]);
+        setPassed([]);
+      }
+      setMsg(result.message);
+    } finally {
+      setBusy(false);
+      setCountdownMs(null);
+    }
+  }
+
+  async function testCharge() {
+    const ports = getPorts(false, true);
+    if (!ports) return;
+    setBusy(true);
+    try {
+      setMsg(`Slot ${selectedSlot}: checking charging...`);
+      const result = await window.arduinoApi.isCharging(ports.arduinoPort);
+      setMsg(result?.charging ? `Slot ${selectedSlot} charge detected` : `Slot ${selectedSlot} failed: charging was not detected`);
+    } catch (e:any) {
+      setMsg(`Slot ${selectedSlot} failed: ${errorText(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function readNfc() {
+    const ports = getPorts(true, false);
+    if (!ports) return;
+    setBusy(true);
+    try {
+      setMsg('Reading NFC tag...');
+      const result = await window.nfcApi.readTag(ports.nfcPort, { timeoutMs: Number(appSettings?.nfcActionTimeoutMs || 10000) });
+      setMsg(`Read NFC: ${String(result?.userText ?? result?.text ?? result?.uid ?? '(empty)') || '(empty)'}`);
+    } catch (e:any) {
+      setMsg(`NFC read failed: ${errorText(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function writeNfc() {
+    const ports = getPorts(true, false);
+    if (!ports) return;
+    const value = nfcWriteText;
+    setBusy(true);
+    try {
+      setMsg('Writing NFC tag...');
+      const result = await window.nfcApi.writeTag(ports.nfcPort, value, { timeoutMs: Number(appSettings?.nfcActionTimeoutMs || 10000) });
+      setMsg(result?.uid || result?.ok ? `NFC write passed: ${value || '(empty)'}` : 'NFC write failed');
+    } catch (e:any) {
+      setMsg(`NFC write failed: ${errorText(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const model = testWall?.model || defaultTestWallModel();
+  const wallSlots = testWall?.slots || [];
+  const countdownSec=countdownMs===null?null:(countdownMs/1000).toFixed(1);
+  const countdownPct=countdownMs===null?0:Math.max(0,Math.min(100,(countdownMs/10000)*100));
 
   return <section className="pageGrid horizontalPage testSpecificSlotPage">
     <div className="panel formPanel">
       <h2>Test specific slot</h2>
       <label>Slot number</label>
       <ClearableTextInput inputRef={slotRef} value={String(selectedSlot || '')} onChange={onSlotInput} placeholder="Enter slot number" />
+      <label>Charging wall serial (optional)</label>
+      <div className="stationWallRow">
+        <ClearableTextInput inputRef={wallSerialRef} value={wallSerial} onChange={setWallSerial} placeholder="Scan or type wall serial" onEnter={()=>loadWallContext()} />
+        <button onClick={()=>loadWallContext()} disabled={busy || !wallSerial.trim()}>Load wall</button>
+      </div>
       <div className="selectedSlotBox">Selected Slot: <strong>{selectedSlot || '-'}</strong></div>
+      {testWall?.wall?.SerialNumber&&<div className="selectedSlotBox">Wall: <strong>{testWall.wall.SerialNumber}</strong></div>}
+      {countdownMs!==null&&<div className="countdownBox"><div>Timeout: <strong>{countdownSec}</strong>s</div><div className="timeoutBar"><span style={{width:`${countdownPct}%`}}></span></div></div>}
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
       <div className="panelBottom"><BackHomeButton onClick={onFinish}/></div>
     </div>
     <div className="panel previewPanel">
       <h2>Slot Test Actions</h2>
       <div className="rightPanelActions testButtons">
-        <button onClick={()=>action('Test Slot')}>Test Slot</button>
-        <button onClick={()=>action('Test Charge')}>Test Charge</button>
-        <button onClick={()=>action('Read NFC')}>Read NFC</button>
-        <button onClick={()=>action('Write NFC')}>Write NFC</button>
+        <button onClick={testSlot} disabled={busy}>Test Slot</button>
+        <button onClick={testCharge} disabled={busy}>Test Charge</button>
+        <button onClick={readNfc} disabled={busy}>Read NFC</button>
+        <button onClick={writeNfc} disabled={busy}>Write NFC</button>
         <input className="inlineNfcInput" value={nfcWriteText} onChange={e=>setNfcWriteText(e.target.value)} placeholder="NFC text to write" />
       </div>
       <div className="wallWithSerials">
-        <WallPreview model={{RowCount:4,ColumnCount:5,HasWelcomeScreen:true}} t={t} activeSlot={selectedSlot} onSlotClick={chooseSlot}/>
-        <div className="nfcSerialList"><h3>Slots Info</h3><div className="emptyState small">Select a slot on the wall or type the slot number.</div></div>
+        <WallPreview model={model} t={t} activeSlot={selectedSlot} completedSlots={passed} failedSlots={failed} onSlotClick={chooseSlot}/>
+        <div className="nfcSerialList"><h3>Slots Info</h3>{wallSlots.length ? wallSlots.map((item:Row)=>(
+          <div key={`${item.RowNumber}-${item.ColumnNumber}-${item.SlotNumber}`} onClick={()=>chooseSlot(Number(item.SlotNumber))} className={`nfcSerialRow clickable ${Number(selectedSlot)===Number(item.SlotNumber)?'active':''} ${passed.includes(Number(item.SlotNumber))?'passed':''} ${failed.includes(Number(item.SlotNumber))?'failed':''}`}>
+            <strong>Slot {item.SlotNumber}</strong>
+            <span>{item.NFCTag || item.NFCCode || '-'}</span>
+            <em className={`slotStatus ${statusClass(item.Status)}`}>{statusLabel(item.Status)}</em>
+          </div>
+        )) : <div className="emptyState small">Select a slot on the wall or type the slot number.</div>}</div>
       </div>
     </div>
   </section>;
@@ -936,10 +1379,21 @@ function DbViewer({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
       const storeRow=stores.find((st:Row)=>String(st.StoreId)===String(s.StoreId));
       const customerRow=customers.find((c:Row)=>String(c.CustomerId)===String(storeRow?.CustomerId || s.CustomerId));
       const stationWallDetails = stationWalls.map((w:Row) => {
-        const modelRow = models.find((m:Row)=>String(m.ChargingWallModelId ?? m.id)===String(w.ChargingWallModelId ?? w.chargingWallModelId));
+        const modelRow = embeddedWallModel(w, models);
         const welcomeRow = welcomeScreens.find((ws:Row)=>String(ws.ChargingWallId ?? ws.chargingWallId)===String(w.ChargingWallId ?? w.id));
-        const wallSlots = allSlots.filter((sl:Row)=>String(sl.ChargingWallId ?? sl.chargingWallId)===String(w.ChargingWallId ?? w.id));
-        return {...w, model: modelRow || null, welcomeScreen: welcomeRow || null, slots: wallSlots};
+        const wallSlots = Array.isArray(w.Slots) && w.Slots.length
+          ? w.Slots
+          : allSlots.filter((sl:Row)=>String(sl.ChargingWallId ?? sl.chargingWallId)===String(w.ChargingWallId ?? w.id));
+        const normalizedSlots = normalizeWallSlotsForModel(wallSlots, modelRow);
+        return {
+          ...w,
+          ModelInfo: modelRow || null,
+          WelcomeScreenSerial: welcomeSerialForWall(w, welcomeRow),
+          Slots: normalizedSlots,
+          model: modelRow || null,
+          welcomeScreen: welcomeRow || null,
+          slots: normalizedSlots
+        };
       });
       return {...s, CustomerName: customerRow?.CustomerName || customerRow?.Name || `Customer ${storeRow?.CustomerId || s.CustomerId || ''}`, StoreName: storeRow?.StoreName || storeRow?.Name || `Store ${s.StoreId||''}`, WallCount: stationWalls.length, Status: status, StationWalls: stationWallDetails};
     });
@@ -969,22 +1423,7 @@ function DbViewer({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
           <span><b>Walls</b>{selectedStation.WallCount}</span>
         </div>
         <div className="selectedStationWalls">
-          {(selectedStation.StationWalls || []).length ? selectedStation.StationWalls.map((w:Row, wallIndex:number) => {
-            const model = w.model || null;
-            const wallStatus = statusToNumber(w.Status);
-            const passedSlots = (w.slots || []).filter((s:Row)=>statusToNumber(s.Status)===1).map((s:Row)=>Number(s.SlotNumber ?? s.slotNumber ?? s.RowNumber ?? 0)).filter(Boolean);
-            const failedSlots = (w.slots || []).filter((s:Row)=>statusToNumber(s.Status)===2).map((s:Row)=>Number(s.SlotNumber ?? s.slotNumber ?? s.RowNumber ?? 0)).filter(Boolean);
-            return <div className="selectedWallCard" key={w.ChargingWallId || w.id || wallIndex}>
-              <div className="selectedWallInfo">
-                <span><b>Wall #{wallIndex + 1}</b></span>
-                <span><b>Wall serial</b>{w.SerialNumber || w.serialNumber || '-'}</span>
-                <span><b>Model</b>{model?.Model || w.Model || '-'}</span>
-                <span><b>Welcome serial</b>{w.welcomeScreen?.SerialNumber || w.WelcomeScreenSerial || '-'}</span>
-                <span><b>Status</b><em className={`statusPill ${statusClass(wallStatus)}`}>{statusLabel(wallStatus)}</em></span>
-              </div>
-              <div className="selectedWallPreview"><WallPreview model={model} t={t} compact completedSlots={passedSlots} failedSlots={failedSlots}/></div>
-            </div>;
-          }) : <div className="emptyState small">No walls linked to this station.</div>}
+          {(selectedStation.StationWalls || []).length ? <StationWallsVisual walls={selectedStation.StationWalls} t={t} compact/> : <div className="emptyState small">No walls linked to this station.</div>}
         </div>
       </div>}
       <table className="stationsTable">
@@ -1787,7 +2226,7 @@ function App(){
       {tab==='configWall'&&<ConfigWall lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
       {tab==='createStation'&&<CreateStation lang={lang} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
       {tab==='db'&&<DbViewer lang={lang} onFinish={()=>setTab('home')}/>}
-      {tab==='testSlot'&&<TestSpecificSlot lang={lang} onFinish={()=>setTab('home')}/>}
+      {tab==='testSlot'&&<TestSpecificSlot lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
       {tab==='deviceManager'&&<section className="deviceManagerScreen"><BackHomeButton onClick={()=>setTab('home')}/><DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/></section>}
     </section>
     <footer className="appFooter"><span>Version {APP_VERSION}</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
