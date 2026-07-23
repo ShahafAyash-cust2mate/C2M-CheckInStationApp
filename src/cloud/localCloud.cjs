@@ -104,7 +104,7 @@ function findWelcomeScreenBySerial(serialNumber) {
   if (!serial) return null;
   return validRows(db.WelcomeScreens, 'WelcomeScreenId').find(w => normSerial(w.SerialNumber) === serial) || null;
 }
-function validateWelcomeScreenSerial(serialNumber, chargingWallId = null) {
+function assertWelcomeScreenSerialBelongsToWall(serialNumber, chargingWallId = null) {
   const screen = findWelcomeScreenBySerial(serialNumber);
   if (!screen) throw new Error(`Welcome screen serial was not found in local cloud: ${serialNumber}`);
   if (chargingWallId !== null && chargingWallId !== undefined && chargingWallId !== '' && Number(screen.ChargingWallId) !== Number(chargingWallId)) {
@@ -267,7 +267,7 @@ function saveWallConfiguration(payload) {
   const db = readDb();
   const wall = getWallById(db, payload.ChargingWallId);
   if (!wall) throw new Error('Charging wall not found');
-  if (payload.WelcomeScreenSerialNumber) validateWelcomeScreenSerial(payload.WelcomeScreenSerialNumber, payload.ChargingWallId);
+  if (payload.WelcomeScreenSerialNumber) assertWelcomeScreenSerialBelongsToWall(payload.WelcomeScreenSerialNumber, payload.ChargingWallId);
 
   db.ChargingSlots = validRows(db.ChargingSlots, 'ChargingSlotId');
 
@@ -328,9 +328,9 @@ function createCheckInStation(payload) {
     item.WelcomeScreenSerial = item.WelcomeScreenSerial || dbWelcomeScreen?.SerialNumber || '';
     if (model && model.HasWelcomeScreen) {
       serialRequired(item.WelcomeScreenSerial, 'Welcome screen serial number');
-      validateWelcomeScreenSerial(item.WelcomeScreenSerial, wall.ChargingWallId);
+      assertWelcomeScreenSerialBelongsToWall(item.WelcomeScreenSerial, wall.ChargingWallId);
     } else if (item.WelcomeScreenSerial) {
-      validateWelcomeScreenSerial(item.WelcomeScreenSerial, wall.ChargingWallId);
+      assertWelcomeScreenSerialBelongsToWall(item.WelcomeScreenSerial, wall.ChargingWallId);
     }
   }
   const station = { CheckInStationId: nextId(db.CheckInStations, 'CheckInStationId'), Name: String(payload.Name || '').trim(), StoreId: Number(payload.StoreId) };
@@ -358,5 +358,5 @@ module.exports = {
   saveWallConfiguration,
   createCheckInStation,
   findWelcomeScreenBySerial,
-  validateWelcomeScreenSerial
+  assertWelcomeScreenSerialBelongsToWall
 };

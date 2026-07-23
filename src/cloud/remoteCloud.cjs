@@ -172,6 +172,8 @@ function modelToLocal(m) {
     ChargingWallModelId: firstDefined(m.ChargingWallModelId, m.chargingWallModelId),
     Description: firstDefined(m.Description, m.description, m.ModelDescription, m.modelDescription, m.DisplayName, m.displayName, m.Name, m.name, ''),
     Model: firstDefined(m.Model, m.model),
+    SerialPrefix: firstDefined(m.SerialPrefix, m.serialPrefix),
+    serialPrefix: firstDefined(m.serialPrefix, m.SerialPrefix),
     RowCount: firstDefined(m.RowCount, m.rowCount),
     ColumnCount: firstDefined(m.ColumnCount, m.columnCount),
     HasWelcomeScreen: Boolean(firstDefined(m.HasWelcomeScreen, m.hasWelcomeScreen, false)),
@@ -211,6 +213,7 @@ function slotToLocal(s, model = null, wallId = null) {
 function wallToLocal(w) {
   if (!w) return null;
   const model = modelToLocal(firstDefined(w.ModelInfo, w.modelInfo, w.model, null));
+  const welcomeScreen = firstDefined(w.welcomeScreen, w.WelcomeScreen, null);
   return {
     ChargingWallId: firstDefined(w.ChargingWallId, w.chargingWallId),
     ChargingWallModelId: firstDefined(w.ChargingWallModelId, w.chargingWallModelId, model?.ChargingWallModelId),
@@ -219,7 +222,11 @@ function wallToLocal(w) {
     ChargingWallIndex: firstDefined(w.ChargingWallIndex, w.chargingWallIndex, null),
     Status: toLocalStatus(firstDefined(w.Status, w.status, 0)),
     ModelInfo: model,
-    WelcomeScreenSerial: firstDefined(w.WelcomeScreenSerial, w.welcomeScreenSerial, ''),
+    WelcomeScreenSerial: firstDefined(w.WelcomeScreenSerial, w.welcomeScreenSerial, welcomeScreen?.serialNumber, welcomeScreen?.SerialNumber, ''),
+    WelcomeScreenId: firstDefined(w.WelcomeScreenId, w.welcomeScreenId, welcomeScreen?.WelcomeScreenId, welcomeScreen?.welcomeScreenId, null),
+    welcomeScreenId: firstDefined(w.welcomeScreenId, w.WelcomeScreenId, welcomeScreen?.welcomeScreenId, welcomeScreen?.WelcomeScreenId, null),
+    WelcomeScreenDeviceId: firstDefined(w.WelcomeScreenDeviceId, w.welcomeScreenDeviceId, welcomeScreen?.welcomeScreenDeviceId, welcomeScreen?.WelcomeScreenDeviceId, welcomeScreen?.deviceId, welcomeScreen?.DeviceId, null),
+    welcomeScreenDeviceId: firstDefined(w.welcomeScreenDeviceId, w.WelcomeScreenDeviceId, welcomeScreen?.welcomeScreenDeviceId, welcomeScreen?.WelcomeScreenDeviceId, welcomeScreen?.deviceId, welcomeScreen?.DeviceId, null),
     Slots: (firstDefined(w.Slots, w.slots, []) || []).map(s => slotToLocal(s, model, firstDefined(w.ChargingWallId, w.chargingWallId)))
   };
 }
@@ -266,16 +273,64 @@ function createSlotsFromModel(wall) {
   }
   return slots;
 }
-async function getWallModels() { return (await request('/charging-wall-models')).map(modelToLocal); }
+async function getWallModels() {
+  const rawModels = await request('/charging-wall-models');
+  const normalizedModels = (rawModels || []).map(modelToLocal);
+  logger.info('Charging wall models raw response', { models: rawModels });
+  logger.info('Charging wall models normalized', { models: normalizedModels });
+  return normalizedModels;
+}
 async function createWall(payload) {
   const body = {
     serialNumber: payload.SerialNumber,
     chargingWallModelId: Number(payload.ChargingWallModelId),
-    ...(payload.WelcomeScreenSerialNumber ? { welcomeScreenSerialNumber: payload.WelcomeScreenSerialNumber } : {})
+    ...(payload.WelcomeScreenSerialNumber ? { welcomeScreenC2MSerialNumber: payload.WelcomeScreenSerialNumber } : {})
   };
-  const row = wallToLocal(await request('/charging-walls', { method: 'POST', body }));
+  logger.info('Create charging wall request', { method: 'POST', url: apiPath('/charging-walls'), body });
+  const response = await request('/charging-walls', { method: 'POST', body });
+  const rawWelcomeScreenId =
+    response?.welcomeScreen?.welcomeScreenId ??
+    response?.welcomeScreen?.WelcomeScreenId ??
+    response?.WelcomeScreen?.welcomeScreenId ??
+    response?.WelcomeScreen?.WelcomeScreenId ??
+    response?.welcomeScreenId ??
+    response?.WelcomeScreenId;
+  logger.info('Create charging wall response', { response });
+  logger.info('Create charging wall returned welcomeScreenId', { welcomeScreenId: rawWelcomeScreenId });
+  const row = wallToLocal(response);
   if (!row.Slots?.length) row.Slots = createSlotsFromModel(row);
-  return { ...row, Slots: row.Slots };
+  return {
+    ...row,
+    RawCreateWallResponse: response,
+    welcomeScreen: response?.welcomeScreen ?? response?.WelcomeScreen ?? null,
+    WelcomeScreenId: rawWelcomeScreenId ?? row.WelcomeScreenId ?? row.welcomeScreenId ?? null,
+    welcomeScreenId: rawWelcomeScreenId ?? row.welcomeScreenId ?? row.WelcomeScreenId ?? null,
+    WelcomeScreenDeviceId: row.WelcomeScreenDeviceId ?? row.welcomeScreenDeviceId ?? null,
+    welcomeScreenDeviceId: row.welcomeScreenDeviceId ?? row.WelcomeScreenDeviceId ?? null,
+    Slots: row.Slots
+  };
+}
+async function provisionWelcomeScreen(payload) {
+  const c2mSerialNumber = String(firstDefined(payload?.c2mSerialNumber, payload?.C2MSerialNumber, payload?.SerialNumber, '') || '').trim();
+  const welcomeScreenId = firstDefined(payload?.welcomeScreenId, payload?.WelcomeScreenId, payload?.subDevice?.welcomeScreenId);
+  if (!c2mSerialNumber) throw new Error('Welcome screen serial is required for registration provision');
+  if (welcomeScreenId === undefined || welcomeScreenId === null || welcomeScreenId === '') throw new Error('welcomeScreenId is required for registration provision');
+  const body = {
+    c2mSerialNumber,
+    subDevice: {
+      welcomeScreenId: Number(welcomeScreenId)
+    }
+  };
+  const url = `${deviceManagementBaseUrl()}/registration/provision`;
+  logger.info('Registration provision request', { method: 'POST', url, body });
+  try {
+    const response = await requestAbsolute(url, { method: 'POST', body });
+    logger.info('Registration provision raw response', { response });
+    return response || { ok: true };
+  } catch (error) {
+    logger.error('Registration provision failed', { body, message: error.message || String(error), stack: error.stack });
+    throw error;
+  }
 }
 async function listWalls(params = {}) {
   const qs = new URLSearchParams();
@@ -298,7 +353,12 @@ async function getWallDetails(id) {
   return {
     wall,
     model: wall.ModelInfo,
-    welcomeScreen: wall.WelcomeScreenSerial ? { ChargingWallId: wall.ChargingWallId, SerialNumber: wall.WelcomeScreenSerial } : null
+    welcomeScreen: wall.WelcomeScreenSerial ? {
+      ChargingWallId: wall.ChargingWallId,
+      SerialNumber: wall.WelcomeScreenSerial,
+      WelcomeScreenId: wall.WelcomeScreenId ?? wall.welcomeScreenId ?? null,
+      WelcomeScreenDeviceId: wall.WelcomeScreenDeviceId ?? wall.welcomeScreenDeviceId ?? null
+    } : null
   };
 }
 async function allocateSlotNfcSerials(id) {
@@ -318,24 +378,85 @@ async function saveWallConfiguration(payload) {
 async function createCheckInStation(payload) {
   const body = {
     name: payload.Name,
-    storeId: Number(payload.StoreId),
-    walls: (payload.Walls || []).map(w => ({ chargingWallId: Number(w.ChargingWallId) }))
+    walls: (payload.Walls || []).map(w => ({ chargingWallId: Number(w.ChargingWallId ?? w.chargingWallId) }))
   };
   const r = await request('', { method: 'POST', body });
   return stationToLocal(r);
 }
-async function validateWelcomeScreenSerial(serialNumber, chargingWallId = null) {
+function deviceIdFrom(value) {
+  const id = Number(firstDefined(
+    value?.deviceId,
+    value?.DeviceId,
+    value?.welcomeScreenDeviceId,
+    value?.WelcomeScreenDeviceId
+  ));
+  return Number.isFinite(id) && id > 0 ? id : null;
+}
+function normalizeDeviceList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.devices)) return payload.devices;
+  if (payload && typeof payload === 'object') return [payload];
+  return [];
+}
+async function resolveWelcomeScreenDeviceId(serialNumber, chargingWallId = null, knownDeviceId = null) {
+  const serial = String(serialNumber || '').trim();
+  const directDeviceId = Number(knownDeviceId);
+  if (Number.isFinite(directDeviceId) && directDeviceId > 0) {
+    logger.info('Welcome screen deviceId already available', { serialNumber: serial, chargingWallId, deviceId: directDeviceId });
+    return { deviceId: directDeviceId, source: 'knownDeviceId' };
+  }
+  if (!serial) throw new Error('Welcome screen serial is required');
+
   const qs = new URLSearchParams();
-  qs.set('serialNumber', serialNumber);
-  if (chargingWallId) qs.set('chargingWallId', String(chargingWallId));
-  const list = await request(`/welcome-screens?${qs}`);
-  const screen = Array.isArray(list) ? list[0] : list;
-  if (!screen) throw new Error(`Welcome screen serial was not found in cloud: ${serialNumber}`);
+  qs.set('serial_number', serial);
+  if (chargingWallId) qs.set('charging_wall_id', String(chargingWallId));
+  const welcomePath = `/welcome-screens?${qs}`;
+  logger.info('Welcome screen lookup request', { serialNumber: serial, chargingWallId, path: welcomePath, url: apiPath(welcomePath) });
+  const welcomeList = await request(welcomePath);
+  logger.info('Welcome screen lookup response', { response: welcomeList });
+  const screen = (Array.isArray(welcomeList) ? welcomeList : normalizeDeviceList(welcomeList))[0];
+  const screenDeviceId = deviceIdFrom(screen);
+  if (screenDeviceId) return { deviceId: screenDeviceId, source: 'welcome-screens', screen };
+
+  const deviceQs = new URLSearchParams();
+  deviceQs.set('c2m_serial_number', serial);
+  deviceQs.set('device_type', 'welcomeScreen');
+  deviceQs.set('data_source', 'persisted');
+  const devicePath = `/devices?${deviceQs}`;
+  const deviceUrl = `${deviceManagementBaseUrl()}${devicePath}`;
+  logger.info('Welcome screen device lookup request', { serialNumber: serial, path: devicePath, url: deviceUrl });
+  const devices = await requestAbsolute(deviceUrl);
+  logger.info('Welcome screen device lookup response', { response: devices });
+  const device = normalizeDeviceList(devices)[0];
+  const resolvedDeviceId = deviceIdFrom(device);
+  if (resolvedDeviceId) return { deviceId: resolvedDeviceId, source: 'devices', device };
+
+  throw new Error(`Welcome screen deviceId was not found for serial: ${serial}`);
+}
+async function validateWelcomeScreenDevice(payload) {
+  const serialNumber = String(firstDefined(payload?.serialNumber, payload?.SerialNumber, payload?.c2mSerialNumber, payload?.C2MSerialNumber, '') || '').trim();
+  const chargingWallId = firstDefined(payload?.chargingWallId, payload?.ChargingWallId, null);
+  const knownDeviceId = firstDefined(payload?.deviceId, payload?.DeviceId, payload?.welcomeScreenDeviceId, payload?.WelcomeScreenDeviceId, null);
+  logger.info('Welcome screen validation started', { serialNumber, chargingWallId, knownDeviceId });
+  const resolved = await resolveWelcomeScreenDeviceId(serialNumber, chargingWallId, knownDeviceId);
+  const body = { deviceId: Number(resolved.deviceId), deviceType: 'welcomeScreen' };
+  const url = `${deviceManagementBaseUrl()}/devices/validate`;
+  logger.info('Welcome screen validate request', { url, body, resolvedBy: resolved.source });
+  const response = await requestAbsolute(url, { method: 'POST', body });
+  logger.info('Welcome screen validate response', { response });
+  if (response?.available === false) {
+    throw new Error(`Welcome screen device is not available: ${response?.reason || 'UNKNOWN'}`);
+  }
+  if (response?.available !== true) {
+    throw new Error(`Welcome screen validation failed: ${response?.reason || 'unexpected response'}`);
+  }
   return {
-    WelcomeScreenId: firstDefined(screen.WelcomeScreenId, screen.welcomeScreenId),
-    ChargingWallId: firstDefined(screen.ChargingWallId, screen.chargingWallId),
-    SerialNumber: firstDefined(screen.SerialNumber, screen.serialNumber),
-    WelcomeScreenDeviceId: firstDefined(screen.WelcomeScreenDeviceId, screen.welcomeScreenDeviceId, null)
+    available: true,
+    reason: response.reason || 'AVAILABLE',
+    deviceId: Number(resolved.deviceId),
+    source: resolved.source
   };
 }
 async function getDb() {
@@ -453,13 +574,14 @@ module.exports = {
   getStoresByCustomer,
   getWallModels,
   createWall,
+  provisionWelcomeScreen,
   getUnassignedWalls,
   getUnassignedWallBySerial,
   getWallDetails,
   allocateSlotNfcSerials,
   saveWallConfiguration,
   createCheckInStation,
-  validateWelcomeScreenSerial,
+  validateWelcomeScreenDevice,
   toLocalStatus,
   toCamelStatus
 };

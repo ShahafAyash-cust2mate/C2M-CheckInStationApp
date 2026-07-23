@@ -160,13 +160,14 @@ cloudHandle('cloud:getCustomers', () => cloud().getCustomers());
 cloudHandle('cloud:getStoresByCustomer', (id) => cloud().getStoresByCustomer(id));
 cloudHandle('cloud:getWallModels', () => cloud().getWallModels());
 cloudHandle('cloud:createWall', (p) => cloud().createWall(p));
+cloudHandle('cloud:provisionWelcomeScreen', (p) => cloud().provisionWelcomeScreen(p));
 cloudHandle('cloud:getUnassignedWalls', () => cloud().getUnassignedWalls());
 cloudHandle('cloud:getUnassignedWallBySerial', (serialNumber) => cloud().getUnassignedWallBySerial(serialNumber));
 cloudHandle('cloud:getWallDetails', (id) => cloud().getWallDetails(id));
 cloudHandle('cloud:allocateSlotNfcSerials', (id) => cloud().allocateSlotNfcSerials(id));
 cloudHandle('cloud:saveWallConfiguration', (p) => cloud().saveWallConfiguration(p));
 cloudHandle('cloud:createCheckInStation', (p) => cloud().createCheckInStation(p));
-cloudHandle('cloud:validateWelcomeScreenSerial', (payload) => cloud().validateWelcomeScreenSerial(payload.serialNumber, payload.chargingWallId));
+cloudHandle('cloud:validateWelcomeScreenDevice', (payload) => cloud().validateWelcomeScreenDevice(payload));
 
 app.whenReady().then(() => {
   createAppMenu();

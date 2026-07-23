@@ -10,7 +10,7 @@ type Row = Record<string, any>;
 type Lang = 'he' | 'en';
 type DeviceStatus = { connected: boolean; portPath: string; message: string; version?: string };
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.16';
 const DEVICE_STATE_KEY = 'c2m-device-state';
 
 function loadDeviceState(): any {
@@ -54,7 +54,7 @@ function errorText(error: any) {
 
 function noticeClass(message: string) {
   const text = String(message || '').toLowerCase();
-  if (/error|failed|cannot|not found|not detected|not connected|disconnected|invalid|missing|timeout|exception|err\b|שגיאה|נכשל/.test(text)) {
+  if (/error|failed|cannot|not found|not detected|not connected|did not include|disconnected|invalid|missing|timeout|exception|err\b|שגיאה|נכשל/.test(text)) {
     return 'notice errorNotice';
   }
   if (/required|warning|warn|please|must|should|empty|select|enter|scan|חובה|אזהרה|נדרש/.test(text)) {
@@ -208,32 +208,6 @@ function modelOptionLabel(m: Row) {
   return description ? `${model} - ${description}` : model;
 }
 
-const WALL_MODEL_BY_DESIGNATION: Record<string, { partNumber: string; hasWelcomeScreen: boolean; colorTokens: string[]; typeTokens: string[] }> = {
-  '11': { partNumber: 'C2M-403-G4-NS-WH', hasWelcomeScreen: false, colorTokens: ['WH', 'WHITE'], typeTokens: ['NS', 'WITHOUT SCREEN'] },
-  '12': { partNumber: 'C2M-403-G4-WS-WH', hasWelcomeScreen: true, colorTokens: ['WH', 'WHITE'], typeTokens: ['WS', 'WELCOME SCREEN'] },
-  '19': { partNumber: 'C2M-403-G4-NS-GR', hasWelcomeScreen: false, colorTokens: ['GR', 'GRAY', 'GREY'], typeTokens: ['NS', 'WITHOUT SCREEN'] },
-  '20': { partNumber: 'C2M-403-G4-WS-GR', hasWelcomeScreen: true, colorTokens: ['GR', 'GRAY', 'GREY'], typeTokens: ['WS', 'WELCOME SCREEN'] }
-};
-
-const MODEL_DESIGNATION_FIELDS = [
-  'ModelDesignation',
-  'modelDesignation',
-  'Designation',
-  'designation',
-  'SerialPrefix',
-  'serialPrefix',
-  'SerialNumberPrefix',
-  'serialNumberPrefix',
-  'BarcodePrefix',
-  'barcodePrefix',
-  'PcbaFg',
-  'pcbaFg',
-  'PCBAFG',
-  'PCBA_FG',
-  'ModelCode',
-  'modelCode'
-];
-
 function modelIdValue(model: Row | null) {
   return model?.ChargingWallModelId ?? model?.chargingWallModelId ?? model?.Id ?? model?.id ?? '';
 }
@@ -246,95 +220,27 @@ function modelHasWelcomeScreen(model: Row | null) {
 
 function serialDesignationFromSerial(serial: string): string | null {
   const s = String(serial || '').trim();
-  return s.length >= 2 ? s.slice(0, 2).toUpperCase() : null;
+  return s.length >= 2 ? s.slice(0, 2) : null;
 }
 
-function normalizeModelText(value: any) {
-  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+function modelSerialPrefix(model: Row | null) {
+  return String(model?.serialPrefix ?? model?.SerialPrefix ?? '').trim();
 }
 
-function modelText(model: Row) {
-  const fields = [
-    model?.Model,
-    model?.model,
-    model?.PartNumber,
-    model?.partNumber,
-    model?.PN,
-    model?.pn,
-    model?.Description,
-    model?.description,
-    model?.Name,
-    model?.name,
-    model?.DisplayName,
-    model?.displayName,
-    model?.SerialNumberFormat,
-    model?.serialNumberFormat,
-    model?.SNFormat,
-    model?.snFormat
-  ];
-  return normalizeModelText(fields.filter(v => v !== undefined && v !== null).join(' '));
-}
-
-function textHasToken(text: string, token: string) {
-  const normalized = normalizeModelText(token);
-  return Boolean(normalized) && (` ${text} `).includes(` ${normalized} `);
-}
-
-function textContainsPhrase(text: string, phrase: string) {
-  const normalized = normalizeModelText(phrase);
-  return Boolean(normalized) && text.includes(normalized);
-}
-
-function designationValueMatches(value: any, designation: string) {
-  const text = String(value ?? '').trim().toUpperCase();
-  if (!text) return false;
-  if (text === designation) return true;
-  return new RegExp(`(^|[^0-9])${designation}([^0-9]|$)`).test(text);
-}
-
-function modelHasDedicatedDesignationField(model: Row) {
-  return MODEL_DESIGNATION_FIELDS.some(field => model?.[field] !== undefined && String(model?.[field] ?? '').trim() !== '');
-}
-
-function dedicatedDesignationMatches(model: Row, designation: string) {
-  return MODEL_DESIGNATION_FIELDS.some(field => designationValueMatches(model?.[field], designation));
-}
-
-function modelDataContainsDesignation(model: Row, designation: string) {
-  return [
-    model?.SerialNumberFormat,
-    model?.serialNumberFormat,
-    model?.SNFormat,
-    model?.snFormat,
-    model?.SerialFormat,
-    model?.serialFormat
-  ].some(value => designationValueMatches(value, designation));
-}
-
-function modelDataMatchesDesignation(model: Row, designation: string) {
-  const rule = WALL_MODEL_BY_DESIGNATION[designation];
-  if (!rule) return false;
-  if (modelDataContainsDesignation(model, designation)) return true;
-  const text = modelText(model);
-  if (textContainsPhrase(text, rule.partNumber)) return true;
-
-  const colorMatches = rule.colorTokens.some(token => textHasToken(text, token));
-  const typeMatches = rule.typeTokens.some(token => textContainsPhrase(text, token));
-  const welcomeMatches = modelHasWelcomeScreen(model) === rule.hasWelcomeScreen;
-  return colorMatches && (typeMatches || welcomeMatches);
-}
-
-function modelForSerialDesignation(models: Row[], serial: string): { designation: string | null; model: Row | null; source: 'none' | 'dedicated' | 'model-data' | 'unknown' } {
+function modelForSerialDesignation(models: Row[], serial: string): { designation: string | null; model: Row | null; error: string } {
   const designation = serialDesignationFromSerial(serial);
-  if (!designation) return { designation: null, model: null, source: 'none' };
-
-  const dedicatedModels = models.filter(modelHasDedicatedDesignationField);
-  if (dedicatedModels.length) {
-    return { designation, model: dedicatedModels.find(m => dedicatedDesignationMatches(m, designation)) || null, source: 'dedicated' };
-  }
-
-  if (!WALL_MODEL_BY_DESIGNATION[designation]) return { designation, model: null, source: 'unknown' };
-  return { designation, model: models.find(m => modelDataMatchesDesignation(m, designation)) || null, source: 'model-data' };
+  if (!designation) return { designation: null, model: null, error: '' };
+  console.info('[Set up new wall] extracted prefix', designation);
+  console.info('[Set up new wall] model serial prefixes', models.map((m: Row) => ({
+    chargingWallModelId: modelIdValue(m),
+    model: m?.model ?? m?.Model,
+    serialPrefix: modelSerialPrefix(m)
+  })));
+  const matches = models.filter((m: Row) => modelSerialPrefix(m) === designation);
+  console.info('[Set up new wall] selected model', matches.length === 1 ? matches[0] : null);
+  if (matches.length === 1) return { designation, model: matches[0], error: '' };
+  if (matches.length > 1) return { designation, model: null, error: 'Invalid wall serial number. Multiple models match this serial prefix.' };
+  return { designation, model: null, error: 'Invalid wall serial number. Unknown serial prefix.' };
 }
 
 
@@ -358,22 +264,33 @@ function WallCreateForm({
   const [modelId,setModelId]=useState('');
   const [msg,setMsg]=useState('');
   const [modelWarning,setModelWarning]=useState('');
-  const [manualModelSerialKey,setManualModelSerialKey]=useState('');
 
   useEffect(()=>{setTimeout(()=>serialRef.current?.focus(),0);},[]);
   useEffect(()=>{
+    console.info('[Set up new wall] getWallModels called');
     window.cloudApi.getWallModels()
-      .then((m:Row[])=>setModels(m))
-      .catch((e:any)=>setMsg(errorText(e)));
+      .then((m:Row[])=>{
+        console.info('[Set up new wall] raw IPC result', m);
+        console.info('[Set up new wall] normalized models array', m);
+        console.info('[Set up new wall] normalized models count', Array.isArray(m) ? m.length : 0);
+        setModels(m);
+      })
+      .catch((e:any)=>{
+        console.error('[Set up new wall] getWallModels failed', e);
+        setMsg(`Error loading wall models: ${errorText(e)}`);
+      });
   },[]);
   useEffect(()=>{
-    const serialKey = String(serial || '').trim().toUpperCase();
+    console.info('[Set up new wall] rendered preview model count', models.length);
+  },[models.length]);
+  useEffect(()=>{
+    const serialKey = String(serial || '').trim();
     if (!serialKey || serialKey.length < 2) {
       setModelWarning('');
+      setModelId('');
       return;
     }
     if (!models.length) return;
-    if (manualModelSerialKey === serialKey) return;
 
     const match = modelForSerialDesignation(models, serial);
     if (match.model) {
@@ -384,22 +301,22 @@ function WallCreateForm({
     }
 
     setModelId('');
-    if (match.source === 'unknown' || !WALL_MODEL_BY_DESIGNATION[match.designation || '']) {
-      setModelWarning('Unknown serial prefix, please select wall model manually.');
-    } else {
-      setModelWarning(`No cloud wall model matches serial prefix ${match.designation}, please select wall model manually.`);
-    }
-  }, [serial, models, manualModelSerialKey]);
+    setModelWarning(match.error);
+  }, [serial, models]);
 
   const serialDesignation = serialDesignationFromSerial(serial);
   const model=models.find(m=>String(modelIdValue(m))===modelId)||null;
   const selectedModelId = modelIdValue(model);
   const selectedModelHasWelcomeScreen = modelHasWelcomeScreen(model);
+  const modelSelectionError = Boolean(serial.trim().length >= 2 && modelWarning);
+  const canSaveWall = Boolean(serial.trim() && model && selectedModelId && !modelSelectionError);
 
   function handleSerialEnter() {
-    const serialKey = String(serial || '').trim().toUpperCase();
+    const serialKey = String(serial || '').trim();
     if (!serialKey || serialKey.length < 2) {
-      setTimeout(()=>modelSelectRef.current?.focus(),0);
+      setModelId('');
+      setModelWarning('');
+      setTimeout(()=>serialRef.current?.focus(),0);
       return;
     }
     const match = modelForSerialDesignation(models, serial);
@@ -407,22 +324,16 @@ function WallCreateForm({
     if (matchedModel) {
       setModelId(String(modelIdValue(matchedModel)));
       setModelWarning('');
-      setManualModelSerialKey('');
     } else {
       setModelId('');
-      setManualModelSerialKey('');
-      if (match.source === 'unknown' || !WALL_MODEL_BY_DESIGNATION[match.designation || '']) {
-        setModelWarning('Unknown serial prefix, please select wall model manually.');
-      } else {
-        setModelWarning(`No cloud wall model matches serial prefix ${match.designation}, please select wall model manually.`);
-      }
+      setModelWarning(match.error);
     }
-    const nextModel = matchedModel || model;
+    const nextModel = matchedModel;
     if (modelHasWelcomeScreen(nextModel)) {
       setTimeout(()=>screenRef.current?.focus(),0);
       return;
     }
-    setTimeout(()=>modelSelectRef.current?.focus(),0);
+    setTimeout(()=>matchedModel ? saveButtonRef.current?.focus() : serialRef.current?.focus(),0);
   }
 
   function handleWelcomeSerialEnter() {
@@ -433,16 +344,36 @@ function WallCreateForm({
     setMsg('');
     try {
       if (!serial.trim()) throw new Error('Scan charging wall serial first');
+      if (modelSelectionError) throw new Error(modelWarning);
       if (!model || !selectedModelId) throw new Error('Choose wall model');
       if (selectedModelHasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen serial is required');
       const row=await window.cloudApi.createWall({
         SerialNumber:serial.trim(),
         ChargingWallModelId:Number(selectedModelId),
-        WelcomeScreenSerialNumber:screenSerial.trim()||null
+        WelcomeScreenSerialNumber:selectedModelHasWelcomeScreen ? (screenSerial.trim()||null) : null
       });
+      console.info('[Set up new wall] create wall response', row);
+      if (selectedModelHasWelcomeScreen) {
+        const welcomeScreenId =
+          row?.welcomeScreenId ??
+          row?.WelcomeScreenId ??
+          row?.welcomeScreen?.welcomeScreenId ??
+          row?.RawCreateWallResponse?.welcomeScreen?.welcomeScreenId;
+        console.info('[Set up new wall] full createWall response before welcomeScreenId validation', row);
+        console.info('[Set up new wall] extracted welcomeScreenId', welcomeScreenId);
+        if (welcomeScreenId === undefined || welcomeScreenId === null || welcomeScreenId === '') {
+          console.error('[Set up new wall] createWall response missing welcomeScreenId', JSON.stringify(row, null, 2));
+          throw new Error('Create wall response did not include welcomeScreenId');
+        }
+        console.info('[Set up new wall] provision skipped: current create-wall contract accepts welcomeScreenC2MSerialNumber and returns welcomeScreen', {
+          welcomeScreenC2MSerialNumber: screenSerial.trim(),
+          welcomeScreenId
+        });
+      }
       setMsg(`ChargingWallId: ${row.ChargingWallId}`);
       onCreated?.(row, serial.trim());
     } catch (e:any) {
+      console.error('[Set up new wall] save/provision failed', e);
       setMsg(errorText(e));
       setTimeout(()=>serialRef.current?.focus(),0);
     }
@@ -452,26 +383,26 @@ function WallCreateForm({
     <div className="panel formPanel">
       <h2>Set up new wall</h2>
 <label>{t.serial}</label>
-      <ClearableTextInput inputRef={serialRef} autoFocus value={serial} onChange={(value)=>{ setSerial(value); if (manualModelSerialKey && String(value || '').trim().toUpperCase() !== manualModelSerialKey) setManualModelSerialKey(''); }} placeholder={t.serial} onEnter={handleSerialEnter}/>
+      <ClearableTextInput inputRef={serialRef} autoFocus value={serial} onChange={setSerial} placeholder={t.serial} onEnter={handleSerialEnter}/>
       <label>{t.wallModel}</label>
-      <select ref={modelSelectRef} value={modelId} onChange={e=>{setModelId(e.target.value); if(e.target.value){ setModelWarning(''); setManualModelSerialKey(String(serial || '').trim().toUpperCase()); } else { setManualModelSerialKey(''); }}}>
-        <option value="">Select wall model</option>
+      <select ref={modelSelectRef} value={modelId} disabled>
+        <option value="">{modelWarning ? 'Invalid wall serial prefix' : 'Scan wall serial to select model'}</option>
         {models.map((m:Row)=><option key={modelIdValue(m) || m.Model} value={String(modelIdValue(m))}>{modelOptionLabel(m)}</option>)}
       </select>
       {serialDesignation&&model&&!modelWarning&&<div className="fieldHint">Model selected by serial prefix: {serialDesignation}</div>}
-      {modelWarning&&<div className="notice warningNotice">{modelWarning}</div>}
+      {modelWarning&&<div className="notice errorNotice">{modelWarning}</div>}
       {selectedModelHasWelcomeScreen&&<>
         <label>{t.welcomeSerial}</label>
         <ClearableTextInput inputRef={screenRef} value={screenSerial} onChange={setScreenSerial} placeholder={t.welcomeSerial} onEnter={handleWelcomeSerialEnter}/>
       </>}
-      <button ref={saveButtonRef} className="primary fullWidthAction" onClick={submit}>Save wall to cloud</button>
+      <button ref={saveButtonRef} className="primary fullWidthAction" onClick={submit} disabled={!canSaveWall}>Save wall to cloud</button>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
       <div className="panelBottom"><BackHomeButton onClick={()=>onCancel?.()}/></div>
     </div>
     <div className="panel previewPanel modelPreviewPanel">
       <h2>{t.modelPreview}</h2>
       <div className="modelPreviewList">
-        {models.length ? models.map((m:Row)=><div key={modelIdValue(m) || m.Model} className={`modelPreviewCard ${String(modelIdValue(m))===String(modelId)?'selected':''}`}>
+        {models.length ? models.map((m:Row)=><div key={modelIdValue(m) || m.Model || m.model} className={`modelPreviewCard ${String(modelIdValue(m))===String(modelId)?'selected':''}`}>
           <h3>{modelOptionLabel(m)}</h3>
           <WallPreview model={m} t={t}/>
         </div>) : <div className="emptyState">No wall models loaded</div>}
@@ -829,7 +760,22 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
   async function validateScreenIfNeeded(){
     if(details?.model?.HasWelcomeScreen){
       if(!screenSerial.trim()) throw new Error('Welcome screen serial is required');
-      await window.cloudApi.validateWelcomeScreenSerial(screenSerial.trim(), Number(selected));
+      const knownDeviceId =
+        details?.welcomeScreen?.WelcomeScreenDeviceId ??
+        details?.welcomeScreen?.welcomeScreenDeviceId ??
+        details?.wall?.WelcomeScreenDeviceId ??
+        details?.wall?.welcomeScreenDeviceId ??
+        null;
+      console.info('[Configure wall] validating welcome screen device', {
+        serialNumber: screenSerial.trim(),
+        chargingWallId: Number(selected),
+        knownDeviceId
+      });
+      await window.cloudApi.validateWelcomeScreenDevice({
+        serialNumber: screenSerial.trim(),
+        chargingWallId: Number(selected),
+        deviceId: knownDeviceId
+      });
     }
   }
 
@@ -1045,11 +991,9 @@ function StationWallsVisual({ walls, t, compact=false }: { walls: Row[]; t: any;
 
 function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?: any; onFinish?:()=>void}) {
   const t=i18n[lang];
-  const [customers,setCustomers]=useState<Row[]>([]); const [customerId,setCustomerId]=useState(''); const [stores,setStores]=useState<Row[]>([]); const [storeId,setStoreId]=useState('');
   const nameRef = useRef<HTMLInputElement>(null); const wallSerialRef = useRef<HTMLInputElement>(null);
   const [name,setName]=useState(''); const [wallSerial,setWallSerial]=useState(''); const [currentWall,setCurrentWall]=useState<Row|null>(null); const [selectedWalls,setSelectedWalls]=useState<Row[]>([]); const [msg,setMsg]=useState(''); const stationAutoFindRef = useRef('');
-  useEffect(()=>{setTimeout(()=>nameRef.current?.focus(),0); window.cloudApi.getCustomers().then(setCustomers).catch((e:any)=>setMsg(errorText(e)));},[]);
-  useEffect(()=>{if(customerId){ const c=customers.find((x:any)=>String(x.CustomerId)===String(customerId)); setStores(Array.isArray(c?.Stores)?c.Stores:[]); } else setStores([]);},[customerId, customers]);
+  useEffect(()=>{setTimeout(()=>nameRef.current?.focus(),0);},[]);
   useEffect(()=>{ const s=wallSerial.trim(); if(!s || s.length < 6 || s===stationAutoFindRef.current) return; const timer=setTimeout(()=>{ stationAutoFindRef.current=s; findWall(); },350); return ()=>clearTimeout(timer); },[wallSerial]);
   async function findWall(){
     setMsg(''); setCurrentWall(null);
@@ -1073,7 +1017,12 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
   }
   async function submit(){
     setMsg('');
-    try { const r=await window.cloudApi.createCheckInStation({Name:name,StoreId:Number(storeId),Walls:selectedWalls.map(w=>({ChargingWallId:w.ChargingWallId,WelcomeScreenSerial:w.WelcomeScreenSerial||''}))}); setMsg(`${t.station} #${r.CheckInStationId}`); setSelectedWalls([]); setName(''); onFinish?.(); }
+    try {
+      if (!name.trim()) throw new Error('Check-in station name is required');
+      if (!selectedWalls.length) throw new Error('Add at least one charging wall');
+      const r=await window.cloudApi.createCheckInStation({Name:name.trim(),Walls:selectedWalls.map(w=>({ChargingWallId:w.ChargingWallId ?? w.chargingWallId}))});
+      setMsg(`${t.station} #${r.CheckInStationId}`); setSelectedWalls([]); setName(''); onFinish?.();
+    }
     catch(e:any){setMsg(errorText(e));}
   }
   return <section className="pageGrid horizontalPage">
@@ -1081,16 +1030,6 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
       <h2>Set up Check-in Station</h2>
       <label>{t.stationName}</label>
       <ClearableTextInput inputRef={nameRef} autoFocus value={name} onChange={setName} placeholder={t.stationName}/>
-      <label>{t.retailer}</label>
-      <select value={customerId} onChange={e=>setCustomerId(e.target.value)}>
-        <option value="">{t.allRetailers}</option>
-        {customers.map(c=><option key={c.CustomerId} value={c.CustomerId}>{c.CustomerName||c.Name||`Customer ${c.CustomerId}`}</option>)}
-      </select>
-      <label>{t.store}</label>
-      <select value={storeId} onChange={e=>setStoreId(e.target.value)}>
-        <option value="">{t.allStores}</option>
-        {stores.map(s=><option key={s.StoreId} value={s.StoreId}>{s.StoreName||s.Name||`Store ${s.StoreId}`}</option>)}
-      </select>
       <label>Charging wall serial</label>
       <div className="stationWallRow">
         <ClearableTextInput inputRef={wallSerialRef} value={wallSerial} onChange={setWallSerial} placeholder="Enter charging wall serial" onEnter={findWall}/>
@@ -1102,7 +1041,7 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
         <span className={`statusPill ${statusClass(currentWall.Status)}`}>Status: {statusLabel(currentWall.Status)}</span>
         {currentWall.ModelInfo?.HasWelcomeScreen&&<span>Welcome screen: {currentWall.WelcomeScreenSerial || 'Missing in DB'}</span>}
       </div>}
-      <button className="secondary" onClick={submit} disabled={!storeId||!selectedWalls.length}>{t.submit}</button>
+      <button className="secondary" onClick={submit} disabled={!name.trim()||!selectedWalls.length}>{t.submit}</button>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
       <div className="panelBottom"><BackHomeButton onClick={()=>onFinish?.()}/></div>
     </div>
