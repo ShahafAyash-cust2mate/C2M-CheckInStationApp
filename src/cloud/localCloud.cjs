@@ -303,6 +303,9 @@ function saveWallConfiguration(payload) {
   writeDb(db);
   return { ok: true, SlotCount: (payload.Slots || []).length, Status: Number(wall.Status || 0) };
 }
+function provisionDevice(_payload) {
+  return { ok: true };
+}
 function createCheckInStation(payload) {
   const db = readDb();
   const wallsPayload = payload.Walls || [];
@@ -356,6 +359,7 @@ module.exports = {
   getWallDetails,
   allocateSlotNfcSerials,
   saveWallConfiguration,
+  provisionDevice,
   createCheckInStation,
   findWelcomeScreenBySerial,
   assertWelcomeScreenSerialBelongsToWall

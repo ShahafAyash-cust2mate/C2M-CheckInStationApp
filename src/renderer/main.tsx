@@ -354,6 +354,7 @@ function WallCreateForm({
       });
       console.info('[Set up new wall] create wall response', row);
       if (selectedModelHasWelcomeScreen) {
+        const chargingWallId = Number(row.ChargingWallId ?? row.chargingWallId);
         const welcomeScreenId =
           row?.welcomeScreenId ??
           row?.WelcomeScreenId ??
@@ -365,10 +366,22 @@ function WallCreateForm({
           console.error('[Set up new wall] createWall response missing welcomeScreenId', JSON.stringify(row, null, 2));
           throw new Error('Create wall response did not include welcomeScreenId');
         }
-        console.info('[Set up new wall] provision skipped: current create-wall contract accepts welcomeScreenC2MSerialNumber and returns welcomeScreen', {
-          welcomeScreenC2MSerialNumber: screenSerial.trim(),
-          welcomeScreenId
-        });
+        const provisionBody = {
+          iotDeviceId: screenSerial.trim(),
+          c2mSerialNumber: screenSerial.trim(),
+          subDevice: {
+            chargingWallId,
+            welcomeScreenId: Number(welcomeScreenId)
+          }
+        };
+        console.info('[Set up new wall] provision request body', provisionBody);
+        try {
+          const provisionResponse = await window.cloudApi.provisionDevice(provisionBody);
+          console.info('[Set up new wall] provision response', provisionResponse);
+        } catch (provisionError: any) {
+          console.error('[Set up new wall] provision failed', provisionError);
+          throw new Error(`Wall was created, but provisioning failed: ${errorText(provisionError)}`);
+        }
       }
       setMsg(`ChargingWallId: ${row.ChargingWallId}`);
       onCreated?.(row, serial.trim());
