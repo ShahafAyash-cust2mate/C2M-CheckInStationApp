@@ -108,13 +108,6 @@ function apiPath(path) {
   if (!path) return base;
   return `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
-function apiPathBase(path) {
-  const cfg = getConfig();
-  ensureConfig(cfg);
-  const base = String(cfg.cloudBaseUrl || '').replace(/\/check-in-stations$/, '');
-  if (!path) return base;
-  return `${base}${path.startsWith('/') ? path : `/${path}`}`;
-}
 async function request(path, options = {}) {
   const cfg = getConfig();
   const token = await getAccessToken();
@@ -333,7 +326,7 @@ async function provisionWelcomeScreen(payload) {
       welcomeScreenId: Number(welcomeScreenId)
     }
   };
-  const url = apiPathBase('/registration/provision');
+  const url = `${deviceManagementBaseUrl()}/registration/provision`;
   logger.info('Registration provision request', { method: 'POST', url, body });
   try {
     const response = await requestAbsolute(url, { method: 'POST', body });
@@ -347,7 +340,7 @@ async function provisionWelcomeScreen(payload) {
 async function provisionDevice(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('Provision request body is required');
   const body = payload;
-  const url = apiPathBase('/registration/provision');
+  const url = `${deviceManagementBaseUrl()}/registration/provision`;
   logger.info('Registration provision request', { method: 'POST', url, body });
   try {
     const response = await requestAbsolute(url, { method: 'POST', body });
