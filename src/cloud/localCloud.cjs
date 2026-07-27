@@ -70,12 +70,6 @@ function assertUniqueChargingWallSerial(db, serialNumber, ignoreId = null) {
   const exists = validRows(db.ChargingWalls, 'ChargingWallId').some(w => normSerial(w.SerialNumber) === serial && Number(w.ChargingWallId) !== Number(ignoreId));
   if (exists) throw new Error(`Charging wall serial already exists: ${serialNumber}`);
 }
-function assertUniqueWelcomeScreenC2MSerialNumber(db, serialNumber, ignoreId = null) {
-  const serial = normSerial(serialNumber);
-  if (!serial) throw new Error('Welcome screen C2M serial number is required');
-  const exists = validRows(db.WelcomeScreens, 'WelcomeScreenId').some(w => normSerial(w.SerialNumber) === serial && Number(w.WelcomeScreenId) !== Number(ignoreId));
-  if (exists) throw new Error(`Welcome screen C2M serial number already exists: ${serialNumber}`);
-}
 function getDb() { return readDb(); }
 function getCustomers() { return validRows(readDb().Customers, 'CustomerId'); }
 function getStoresByCustomer(customerId) { return validRows(readDb().Stores, 'StoreId').filter(s => Number(s.CustomerId) === Number(customerId)); }
@@ -98,21 +92,6 @@ function getWallDetails(id) {
   const welcomeScreen = validRows(db.WelcomeScreens, 'WelcomeScreenId').find(s => Number(s.ChargingWallId) === Number(wall.ChargingWallId)) || null;
   return { wall, model, welcomeScreen };
 }
-function findWelcomeScreenByC2MSerialNumber(serialNumber) {
-  const db = readDb();
-  const serial = normSerial(serialNumber);
-  if (!serial) return null;
-  return validRows(db.WelcomeScreens, 'WelcomeScreenId').find(w => normSerial(w.SerialNumber) === serial) || null;
-}
-function assertWelcomeScreenC2MSerialNumberBelongsToWall(serialNumber, chargingWallId = null) {
-  const screen = findWelcomeScreenByC2MSerialNumber(serialNumber);
-  if (!screen) throw new Error(`Welcome screen C2M serial number was not found in local cloud: ${serialNumber}`);
-  if (chargingWallId !== null && chargingWallId !== undefined && chargingWallId !== '' && Number(screen.ChargingWallId) !== Number(chargingWallId)) {
-    throw new Error(`Welcome screen C2M serial number ${serialNumber} belongs to another charging wall`);
-  }
-  return screen;
-}
-
 function generateAndPersistSlotNfcSerials(db, wall, model) {
   const wallId = Number(wall.ChargingWallId);
 
@@ -176,9 +155,6 @@ function createWall(payload) {
   const welcomeSerial = String(payload.WelcomeScreenC2MSerialNumber || '').trim();
   if (model.HasWelcomeScreen) {
     serialRequired(welcomeSerial, 'Welcome screen C2M serial number');
-    assertUniqueWelcomeScreenC2MSerialNumber(db, welcomeSerial);
-  } else if (welcomeSerial) {
-    assertUniqueWelcomeScreenC2MSerialNumber(db, welcomeSerial);
   }
   const row = {
     ChargingWallId: nextId(db.ChargingWalls, 'ChargingWallId'),
@@ -267,7 +243,6 @@ function saveWallConfiguration(payload) {
   const db = readDb();
   const wall = getWallById(db, payload.ChargingWallId);
   if (!wall) throw new Error('Charging wall not found');
-  if (payload.WelcomeScreenC2MSerialNumber) assertWelcomeScreenC2MSerialNumberBelongsToWall(payload.WelcomeScreenC2MSerialNumber, payload.ChargingWallId);
 
   db.ChargingSlots = validRows(db.ChargingSlots, 'ChargingSlotId');
 
@@ -345,7 +320,5 @@ module.exports = {
   allocateSlotNfcSerials,
   saveWallConfiguration,
   provisionDevice,
-  createCheckInStation,
-  findWelcomeScreenByC2MSerialNumber,
-  assertWelcomeScreenC2MSerialNumberBelongsToWall
+  createCheckInStation
 };
