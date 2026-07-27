@@ -10,7 +10,7 @@ type Row = Record<string, any>;
 type Lang = 'he' | 'en';
 type DeviceStatus = { connected: boolean; portPath: string; message: string; version?: string };
 
-const APP_VERSION = '1.16';
+const APP_VERSION = '1.18';
 const DEVICE_STATE_KEY = 'c2m-device-state';
 
 function loadDeviceState(): any {
@@ -605,7 +605,6 @@ async function runSlotHardwareTest({
   arduinoPort,
   setMsg,
   setCountdownMs,
-  validateBeforeTest,
   openWallAfterPass = true,
 }: {
   item: Row;
@@ -615,7 +614,6 @@ async function runSlotHardwareTest({
   arduinoPort: string;
   setMsg: (message: string) => void;
   setCountdownMs: (value: number | null) => void;
-  validateBeforeTest?: () => Promise<void>;
   openWallAfterPass?: boolean;
 }): Promise<{ success: boolean; message: string; item: Row }> {
   const testedItem = { ...item };
@@ -630,8 +628,6 @@ async function runSlotHardwareTest({
   }
 
   try {
-    await validateBeforeTest?.();
-
     // The real cell test always starts from a neutral LED state.
     await safeTurnAllLedsOff(arduinoPort);
 
@@ -757,28 +753,6 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
     return {nfcPort, arduinoPort};
   }
 
-  async function validateScreenIfNeeded(){
-    if(details?.model?.HasWelcomeScreen){
-      if(!screenSerial.trim()) throw new Error('Welcome screen serial is required');
-      const knownDeviceId =
-        details?.welcomeScreen?.WelcomeScreenDeviceId ??
-        details?.welcomeScreen?.welcomeScreenDeviceId ??
-        details?.wall?.WelcomeScreenDeviceId ??
-        details?.wall?.welcomeScreenDeviceId ??
-        null;
-      console.info('[Configure wall] validating welcome screen device', {
-        serialNumber: screenSerial.trim(),
-        chargingWallId: Number(selected),
-        knownDeviceId
-      });
-      await window.cloudApi.validateWelcomeScreenDevice({
-        serialNumber: screenSerial.trim(),
-        chargingWallId: Number(selected),
-        deviceId: knownDeviceId
-      });
-    }
-  }
-
   function selectSlot(slotNumber: number) {
     if (testViewActive || countdownMs !== null) return;
     const nextIdx = alloc.findIndex((s:any) => Number(s.SlotNumber) === Number(slotNumber));
@@ -791,23 +765,28 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
   async function startCurrentSlotTest(){
     const item=alloc[idx]; if(!item) return;
     if(!verifyDevices()) return;
-    try { await validateScreenIfNeeded(); setWallTestMode(false); setTestViewActive(true); setTestInstruction({slotNumber:item.SlotNumber}); setMsg(`Please Enter the Unit into Slot ${item.SlotNumber}`); }
-    catch(e:any){ setMsg(errorText(e)); }
+    // Welcome Screen cloud availability validation is intentionally not part
+    // of the charging-wall hardware test. The screen is provisioned during
+    // wall creation.
+    setWallTestMode(false);
+    setTestViewActive(true);
+    setTestInstruction({slotNumber:item.SlotNumber});
+    setMsg(`Please Enter the Unit into Slot ${item.SlotNumber}`);
   }
 
   async function startWallTest(){
     if(!alloc.length) return setMsg('Select a charging wall first');
     if(!verifyDevices()) return;
-    try {
-      await validateScreenIfNeeded();
-      const startIndex = Math.max(0, Math.min(idx, alloc.length - 1));
-      const startSlot = alloc[startIndex];
-      setIdx(startIndex);
-      setWallTestMode(true);
-      setTestViewActive(true);
-      setTestInstruction({slotNumber:startSlot.SlotNumber});
-      setMsg(`Wall test will continue from Slot ${startSlot.SlotNumber}. Please Enter the Unit into Slot ${startSlot.SlotNumber}`);
-    } catch(e:any){ setMsg(errorText(e)); }
+    // Welcome Screen cloud availability validation is intentionally not part
+    // of the charging-wall hardware test. The screen is provisioned during
+    // wall creation.
+    const startIndex = Math.max(0, Math.min(idx, alloc.length - 1));
+    const startSlot = alloc[startIndex];
+    setIdx(startIndex);
+    setWallTestMode(true);
+    setTestViewActive(true);
+    setTestInstruction({slotNumber:startSlot.SlotNumber});
+    setMsg(`Wall test will continue from Slot ${startSlot.SlotNumber}. Please Enter the Unit into Slot ${startSlot.SlotNumber}`);
   }
 
   function cancelSlotPrompt(){
@@ -894,8 +873,7 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
       nfcPort,
       arduinoPort,
       setMsg,
-      setCountdownMs,
-      validateBeforeTest: validateScreenIfNeeded
+      setCountdownMs
     });
     return await finishSlot(result.success, result.message, result.item);
   }
@@ -903,7 +881,6 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
   async function save(){
     if(!selected) return setMsg('Select a charging wall first');
     try {
-      await validateScreenIfNeeded();
       const wallStatus = failed.length ? 2 : (alloc.length && alloc.every((s:any)=>statusToNumber(s.Status)===1) ? 1 : 0);
       const r=await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenSerialNumber:screenSerial.trim(),Slots:alloc,Status:wallStatus});
       setMsg(`${t.savedSlots}: ${r.SlotCount} | Wall status: ${statusLabel(r.Status)}`);
@@ -998,8 +975,12 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
   async function findWall(){
     setMsg(''); setCurrentWall(null);
     try{
+      console.info('[Create Check-in Station] Add wall lookup requested', { serial: wallSerial.trim() });
       const wall = await window.cloudApi.getUnassignedWallBySerial(wallSerial.trim());
-      if(selectedWalls.some(w=>Number(w.ChargingWallId)===Number(wall.ChargingWallId))) throw new Error('This charging wall was already added to the station');
+      console.info('[Create Check-in Station] Add wall raw/normalized response', wall);
+      const chargingWallId = Number(wall.chargingWallId ?? wall.ChargingWallId);
+      if(!Number.isFinite(chargingWallId) || chargingWallId <= 0) throw new Error('Charging wall lookup did not return a valid chargingWallId');
+      if(selectedWalls.some(w=>Number(w.chargingWallId ?? w.ChargingWallId)===chargingWallId)) throw new Error('This charging wall was already added to the station');
       setCurrentWall(wall);
     }catch(e:any){setMsg(errorText(e));}
   }
@@ -1011,17 +992,57 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
       const serial = String(currentWall.WelcomeScreenSerial || '').trim();
       if(currentWall.ModelInfo?.HasWelcomeScreen && !serial) throw new Error('Welcome screen serial is missing in local cloud for this wall');
       if(serial && selectedWalls.some(w=>String(w.WelcomeScreenSerial||'').trim().toUpperCase()===serial.toUpperCase())) throw new Error(`Welcome screen serial was already added: ${serial}`);
-      setSelectedWalls(p=>[...p,{...currentWall,WelcomeScreenSerial:serial}]);
+      const chargingWallId = Number(currentWall.chargingWallId ?? currentWall.ChargingWallId);
+      setSelectedWalls(p=>[...p,{...currentWall, chargingWallId, ChargingWallId: chargingWallId, WelcomeScreenSerial:serial}]);
       setWallSerial(''); setCurrentWall(null); setTimeout(()=>wallSerialRef.current?.focus(),0);
     } catch(e:any){setMsg(errorText(e));}
+  }
+  function checkInStationIdFrom(response: Row) {
+    const id = Number(
+      response?.checkInStationId ??
+      response?.CheckInStationId ??
+      response?.data?.checkInStationId ??
+      response?.result?.checkInStationId ??
+      response?.RawCreateCheckInStationResponse?.checkInStationId
+    );
+    return Number.isFinite(id) && id > 0 ? id : null;
   }
   async function submit(){
     setMsg('');
     try {
       if (!name.trim()) throw new Error('Check-in station name is required');
       if (!selectedWalls.length) throw new Error('Add at least one charging wall');
-      const r=await window.cloudApi.createCheckInStation({Name:name.trim(),Walls:selectedWalls.map(w=>({ChargingWallId:w.ChargingWallId ?? w.chargingWallId}))});
-      setMsg(`${t.station} #${r.CheckInStationId}`); setSelectedWalls([]); setName(''); onFinish?.();
+      const createPayload = {
+        Name: name.trim(),
+        Walls: selectedWalls.map(w=>({chargingWallId:Number(w.chargingWallId)}))
+      };
+      console.info('[Create Check-in Station] create request payload', {
+        name: createPayload.Name,
+        walls: createPayload.Walls.map(w => ({ chargingWallId: w.chargingWallId }))
+      });
+      const r=await window.cloudApi.createCheckInStation(createPayload);
+      console.info('[Create Check-in Station] raw create response', r);
+      const checkInStationId = checkInStationIdFrom(r);
+      console.info('[Create Check-in Station] extracted checkInStationId', checkInStationId);
+      if (!checkInStationId) throw new Error('Create Check-in Station response did not include checkInStationId');
+      const provisionBody = {
+        c2mSerialNumber: `CIS-${checkInStationId}`,
+        subDevice: {
+          checkinStationId: checkInStationId
+        }
+      };
+      console.info('[Create Check-in Station] provision request body', provisionBody);
+      try {
+        const provisionResponse = await window.cloudApi.provisionDevice(provisionBody);
+        console.info('[Create Check-in Station] provision response', provisionResponse);
+      } catch (provisionError:any) {
+        console.error('[Create Check-in Station] provision failed', provisionError);
+        throw new Error(`Check-in Station was created, but provisioning failed: ${errorText(provisionError)}`);
+      }
+      setMsg(`${t.station} #${checkInStationId}`);
+      setSelectedWalls([]);
+      setName('');
+      onFinish?.();
     }
     catch(e:any){setMsg(errorText(e));}
   }

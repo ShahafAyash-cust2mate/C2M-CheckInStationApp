@@ -8,13 +8,13 @@ contextBridge.exposeInMainWorld('cloudApi', {
   getWallModels: () => ipcRenderer.invoke('cloud:getWallModels'),
   createWall: (p) => ipcRenderer.invoke('cloud:createWall', p),
   provisionWelcomeScreen: (p) => ipcRenderer.invoke('cloud:provisionWelcomeScreen', p),
+  provisionDevice: (p) => ipcRenderer.invoke('cloud:provisionDevice', p),
   getUnassignedWalls: () => ipcRenderer.invoke('cloud:getUnassignedWalls'),
   getUnassignedWallBySerial: (serialNumber) => ipcRenderer.invoke('cloud:getUnassignedWallBySerial', serialNumber),
   getWallDetails: (id) => ipcRenderer.invoke('cloud:getWallDetails', id),
   allocateSlotNfcSerials: (id) => ipcRenderer.invoke('cloud:allocateSlotNfcSerials', id),
   saveWallConfiguration: (p) => ipcRenderer.invoke('cloud:saveWallConfiguration', p),
   createCheckInStation: (p) => ipcRenderer.invoke('cloud:createCheckInStation', p),
-  validateWelcomeScreenDevice: (payload) => ipcRenderer.invoke('cloud:validateWelcomeScreenDevice', payload),
   getLogPath: () => ipcRenderer.invoke('cloud:getLogPath')
 });
 
