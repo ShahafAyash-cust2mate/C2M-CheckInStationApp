@@ -224,7 +224,7 @@ function wallToLocal(w) {
     ChargingWallIndex: firstDefined(w.ChargingWallIndex, w.chargingWallIndex, null),
     Status: toLocalStatus(firstDefined(w.Status, w.status, 0)),
     ModelInfo: model,
-    WelcomeScreenSerial: firstDefined(w.WelcomeScreenSerial, w.welcomeScreenSerial, welcomeScreen?.serialNumber, welcomeScreen?.SerialNumber, ''),
+    WelcomeScreenC2MSerialNumber: firstDefined(w.WelcomeScreenC2MSerialNumber, w.welcomeScreenC2MSerialNumber, ''),
     WelcomeScreenId: firstDefined(w.WelcomeScreenId, w.welcomeScreenId, welcomeScreen?.WelcomeScreenId, welcomeScreen?.welcomeScreenId, null),
     welcomeScreenId: firstDefined(w.welcomeScreenId, w.WelcomeScreenId, welcomeScreen?.welcomeScreenId, welcomeScreen?.WelcomeScreenId, null),
     WelcomeScreenDeviceId: firstDefined(w.WelcomeScreenDeviceId, w.welcomeScreenDeviceId, welcomeScreen?.welcomeScreenDeviceId, welcomeScreen?.WelcomeScreenDeviceId, welcomeScreen?.deviceId, welcomeScreen?.DeviceId, null),
@@ -289,7 +289,7 @@ async function createWall(payload) {
   const body = {
     serialNumber: payload.SerialNumber,
     chargingWallModelId: Number(payload.ChargingWallModelId),
-    ...(payload.WelcomeScreenSerialNumber ? { welcomeScreenC2MSerialNumber: payload.WelcomeScreenSerialNumber } : {})
+    ...(payload.WelcomeScreenC2MSerialNumber ? { welcomeScreenC2MSerialNumber: payload.WelcomeScreenC2MSerialNumber } : {})
   };
   logger.info('Create charging wall request', { method: 'POST', url: apiPath('/charging-walls'), body });
   const response = await request('/charging-walls', { method: 'POST', body });
@@ -318,7 +318,7 @@ async function createWall(payload) {
 async function provisionWelcomeScreen(payload) {
   const c2mSerialNumber = String(firstDefined(payload?.c2mSerialNumber, payload?.C2MSerialNumber, payload?.SerialNumber, '') || '').trim();
   const welcomeScreenId = firstDefined(payload?.welcomeScreenId, payload?.WelcomeScreenId, payload?.subDevice?.welcomeScreenId);
-  if (!c2mSerialNumber) throw new Error('Welcome screen serial is required for registration provision');
+  if (!c2mSerialNumber) throw new Error('Welcome screen C2M serial number is required for registration provision');
   if (welcomeScreenId === undefined || welcomeScreenId === null || welcomeScreenId === '') throw new Error('welcomeScreenId is required for registration provision');
   const body = {
     c2mSerialNumber,
@@ -373,12 +373,12 @@ async function getUnassignedWallBySerial(serialNumber) {
 }
 async function getWallDetails(id) {
   const wall = wallToLocal(await request(`/charging-walls/${Number(id)}`));
+  const hasWelcomeScreenData = wall.WelcomeScreenId != null || wall.welcomeScreenId != null || wall.WelcomeScreenDeviceId != null || wall.welcomeScreenDeviceId != null;
   return {
     wall,
     model: wall.ModelInfo,
-    welcomeScreen: wall.WelcomeScreenSerial ? {
+    welcomeScreen: hasWelcomeScreenData ? {
       ChargingWallId: wall.ChargingWallId,
-      SerialNumber: wall.WelcomeScreenSerial,
       WelcomeScreenId: wall.WelcomeScreenId ?? wall.welcomeScreenId ?? null,
       WelcomeScreenDeviceId: wall.WelcomeScreenDeviceId ?? wall.welcomeScreenDeviceId ?? null
     } : null
@@ -391,7 +391,7 @@ async function allocateSlotNfcSerials(id) {
 }
 async function saveWallConfiguration(payload) {
   const body = {
-    ...(payload.WelcomeScreenSerialNumber ? { welcomeScreenSerialNumber: payload.WelcomeScreenSerialNumber } : {}),
+    ...(payload.WelcomeScreenC2MSerialNumber ? { welcomeScreenC2MSerialNumber: payload.WelcomeScreenC2MSerialNumber } : {}),
     ...(payload.Status !== undefined && payload.Status !== null ? { status: toCamelStatus(payload.Status) } : {}),
     slots: (payload.Slots || []).map(slotToRemote)
   };
@@ -427,8 +427,7 @@ async function getDb() {
   db.CheckInStations = stations.map(s => ({ CheckInStationId: s.CheckInStationId, Name: s.Name, StoreId: s.StoreId }));
   for (const st of stations) {
     for (const w of st.Walls || []) {
-      db.ChargingWalls.push({ ChargingWallId: w.ChargingWallId, ChargingWallModelId: w.ChargingWallModelId, CheckInStationId: st.CheckInStationId, SerialNumber: w.SerialNumber, ChargingWallIndex: w.ChargingWallIndex, Status: w.Status, ModelInfo: w.ModelInfo, WelcomeScreenSerial: w.WelcomeScreenSerial, Slots: w.Slots });
-      if (w.WelcomeScreenSerial) db.WelcomeScreens.push({ WelcomeScreenId: null, ChargingWallId: w.ChargingWallId, SerialNumber: w.WelcomeScreenSerial });
+      db.ChargingWalls.push({ ChargingWallId: w.ChargingWallId, ChargingWallModelId: w.ChargingWallModelId, CheckInStationId: st.CheckInStationId, SerialNumber: w.SerialNumber, ChargingWallIndex: w.ChargingWallIndex, Status: w.Status, ModelInfo: w.ModelInfo, WelcomeScreenC2MSerialNumber: w.WelcomeScreenC2MSerialNumber, Slots: w.Slots });
       db.ChargingSlots.push(...(w.Slots || []));
     }
   }

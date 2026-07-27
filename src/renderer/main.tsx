@@ -88,7 +88,7 @@ const i18n = {
     saveWall:'Save wall to cloud', modelPreview:'Model preview', chooseModel:'Choose a model to preview the wall', welcomeScreen:'Welcome Screen', waiting:'Waiting', active:'Active', done:'Done',
     stationName:'Check-in station name', retailer:'Retailer', store:'Store', addWall:'Add wall', submit:'Submit and save', chooseWall:'Choose wall', unassignedWall:'Choose unassigned wall',
     currentSlot:'Current slot', testSlot:'Test current slot', allRetailers:'All retailers', allStores:'All stores', station:'Check-in Station', savedSlots:'Saved slots', language:'Language',
-    welcomeSerial:'Welcome screen serial', noScreen:'None', fullJson:'Show full JSON', nfcSerials:'NFC serials', noNfcSerials:'No NFC serials'
+    welcomeSerial:'Welcome screen C2M serial number', noScreen:'None', fullJson:'Show full JSON', nfcSerials:'NFC serials', noNfcSerials:'No NFC serials'
   },
   he: {
     home:'מסך ראשי', createWall:'הקמת קיר טעינה', configWall:'קנפוג קיר טעינה', createStation:'הקמת עמדת כניסה', db:'הצגת עמדות כניסה',
@@ -346,11 +346,11 @@ function WallCreateForm({
       if (!serial.trim()) throw new Error('Scan charging wall serial first');
       if (modelSelectionError) throw new Error(modelWarning);
       if (!model || !selectedModelId) throw new Error('Choose wall model');
-      if (selectedModelHasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen serial is required');
+      if (selectedModelHasWelcomeScreen && !screenSerial.trim()) throw new Error('Welcome screen C2M serial number is required');
       const row=await window.cloudApi.createWall({
         SerialNumber:serial.trim(),
         ChargingWallModelId:Number(selectedModelId),
-        WelcomeScreenSerialNumber:selectedModelHasWelcomeScreen ? (screenSerial.trim()||null) : null
+        WelcomeScreenC2MSerialNumber:selectedModelHasWelcomeScreen ? (screenSerial.trim()||null) : null
       });
       console.info('[Set up new wall] create wall response', row);
       if (selectedModelHasWelcomeScreen) {
@@ -567,16 +567,6 @@ function embeddedWallModel(wall: Row, models: Row[] = []): Row | null {
   if (embedded) return embedded as Row;
   const modelId = wall?.ChargingWallModelId ?? wall?.chargingWallModelId ?? wall?.ModelId ?? wall?.modelId;
   return models.find((m:Row)=>String(m.ChargingWallModelId ?? m.id)===String(modelId)) || null;
-}
-
-function welcomeSerialForWall(wall: Row, welcomeScreen?: Row | null): string {
-  return String(
-    wall?.WelcomeScreenSerial ??
-    wall?.welcomeScreenSerial ??
-    welcomeScreen?.SerialNumber ??
-    welcomeScreen?.serialNumber ??
-    ''
-  ).trim();
 }
 
 function normalizeWallSlotsForModel(payload: any, model: Row | null): Row[] {
@@ -840,7 +830,7 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
     setIdx(nextIndex);
     if (wallTestMode) {
       const latestAlloc = alloc.map(s => s.SlotNumber === item.SlotNumber ? { ...s, Status: success ? 1 : 2 } : s);
-      try { await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenSerialNumber:screenSerial.trim(),Slots:latestAlloc,Status:1}); } catch {}
+      try { await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenC2MSerialNumber:screenSerial.trim(),Slots:latestAlloc,Status:1}); } catch {}
       setMsg('Wall test completed successfully');
     }
     setTestInstruction(null);
@@ -870,7 +860,7 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
       try {
         await window.cloudApi.saveWallConfiguration({
           ChargingWallId: Number(selected),
-          WelcomeScreenSerialNumber: screenSerial.trim(),
+          WelcomeScreenC2MSerialNumber: screenSerial.trim(),
           Slots: updatedAlloc,
           Status: success ? undefined : 2
         });
@@ -895,7 +885,7 @@ function ConfigWall({ lang, deviceState, appSettings, initialSerial='', autoFind
     if(!selected) return setMsg('Select a charging wall first');
     try {
       const wallStatus = failed.length ? 2 : (alloc.length && alloc.every((s:any)=>statusToNumber(s.Status)===1) ? 1 : 0);
-      const r=await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenSerialNumber:screenSerial.trim(),Slots:alloc,Status:wallStatus});
+      const r=await window.cloudApi.saveWallConfiguration({ChargingWallId:Number(selected),WelcomeScreenC2MSerialNumber:screenSerial.trim(),Slots:alloc,Status:wallStatus});
       setMsg(`${t.savedSlots}: ${r.SlotCount} | Wall status: ${statusLabel(r.Status)}`);
     } catch(e:any){setMsg(errorText(e));}
   }
@@ -969,7 +959,7 @@ function StationWallsVisual({ walls, t, compact=false }: { walls: Row[]; t: any;
             <div className="wallPropLine"><strong>Wall #{i + 1}</strong></div>
             <div className="wallPropLine mono">{w.SerialNumber || w.serialNumber || '-'}</div>
             <div className="wallPropLine">{model?.Model || w.Model || '-'}</div>
-            <div className="wallPropLine welcomeLine">{model?.HasWelcomeScreen ? `Welcome: ${w.WelcomeScreenSerial || w.welcomeScreenSerial || 'Missing'}` : '\u00A0'}</div>
+            <div className="wallPropLine welcomeLine">\u00A0</div>
             <em className={`statusPill ${statusClass(w.Status)}`}>{statusLabel(w.Status)}</em>
           </div>
           <div className="linkedWallPreviewWrap"><WallPreview model={model} t={t} compact={compact} completedSlots={passedSlots} failedSlots={failedSlots}/></div>
@@ -1002,11 +992,8 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
     try{
       if(!currentWall) throw new Error('Find a charging wall first');
       if(Number(currentWall.Status || 0) !== 1) throw new Error(`Charging wall ${currentWall.SerialNumber} cannot be added because its status is not Pass`);
-      const serial = String(currentWall.WelcomeScreenSerial || '').trim();
-      if(currentWall.ModelInfo?.HasWelcomeScreen && !serial) throw new Error('Welcome screen serial is missing in local cloud for this wall');
-      if(serial && selectedWalls.some(w=>String(w.WelcomeScreenSerial||'').trim().toUpperCase()===serial.toUpperCase())) throw new Error(`Welcome screen serial was already added: ${serial}`);
       const chargingWallId = Number(currentWall.chargingWallId ?? currentWall.ChargingWallId);
-      setSelectedWalls(p=>[...p,{...currentWall, chargingWallId, ChargingWallId: chargingWallId, WelcomeScreenSerial:serial}]);
+      setSelectedWalls(p=>[...p,{...currentWall, chargingWallId, ChargingWallId: chargingWallId}]);
       setWallSerial(''); setCurrentWall(null); setTimeout(()=>wallSerialRef.current?.focus(),0);
     } catch(e:any){setMsg(errorText(e));}
   }
@@ -1073,7 +1060,6 @@ function CreateStation({ lang, appSettings, onFinish }: {lang:Lang; appSettings?
         <strong>{currentWall.SerialNumber}</strong>
         <span>{currentWall.ModelInfo?.Model}</span>
         <span className={`statusPill ${statusClass(currentWall.Status)}`}>Status: {statusLabel(currentWall.Status)}</span>
-        {currentWall.ModelInfo?.HasWelcomeScreen&&<span>Welcome screen: {currentWall.WelcomeScreenSerial || 'Missing in DB'}</span>}
       </div>}
       <button className="secondary" onClick={submit} disabled={!name.trim()||!selectedWalls.length}>{t.submit}</button>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
@@ -1361,7 +1347,6 @@ function DbViewer({ lang, onFinish }: {lang:Lang; onFinish:()=>void}) {
         return {
           ...w,
           ModelInfo: modelRow || null,
-          WelcomeScreenSerial: welcomeSerialForWall(w, welcomeRow),
           Slots: normalizedSlots,
           model: modelRow || null,
           welcomeScreen: welcomeRow || null,

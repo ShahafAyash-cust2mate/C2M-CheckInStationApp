@@ -2629,7 +2629,7 @@ main {
   margin-top: 0 !important;
 }
 
-/* Welcome screen serial in edit mode should be display-only-like */
+/* Welcome screen C2M serial number in edit mode should be display-only-like */
 .formPanel input[readonly],
 .formPanel .readonlyInput,
 .formPanel .displayOnlyInput {

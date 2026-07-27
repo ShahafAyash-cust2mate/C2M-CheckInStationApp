@@ -70,11 +70,11 @@ function assertUniqueChargingWallSerial(db, serialNumber, ignoreId = null) {
   const exists = validRows(db.ChargingWalls, 'ChargingWallId').some(w => normSerial(w.SerialNumber) === serial && Number(w.ChargingWallId) !== Number(ignoreId));
   if (exists) throw new Error(`Charging wall serial already exists: ${serialNumber}`);
 }
-function assertUniqueWelcomeScreenSerial(db, serialNumber, ignoreId = null) {
+function assertUniqueWelcomeScreenC2MSerialNumber(db, serialNumber, ignoreId = null) {
   const serial = normSerial(serialNumber);
-  if (!serial) throw new Error('Welcome screen serial number is required');
+  if (!serial) throw new Error('Welcome screen C2M serial number is required');
   const exists = validRows(db.WelcomeScreens, 'WelcomeScreenId').some(w => normSerial(w.SerialNumber) === serial && Number(w.WelcomeScreenId) !== Number(ignoreId));
-  if (exists) throw new Error(`Welcome screen serial already exists: ${serialNumber}`);
+  if (exists) throw new Error(`Welcome screen C2M serial number already exists: ${serialNumber}`);
 }
 function getDb() { return readDb(); }
 function getCustomers() { return validRows(readDb().Customers, 'CustomerId'); }
@@ -86,7 +86,7 @@ function withModel(db, wall) {
     ...wall,
     Status: Number(wall.Status || 0),
     ModelInfo: validRows(db.ChargingWallModels, 'ChargingWallModelId').find(m => Number(m.ChargingWallModelId) === Number(wall.ChargingWallModelId)) || null,
-    WelcomeScreenSerial: welcomeScreen?.SerialNumber || ''
+    WelcomeScreenC2MSerialNumber: welcomeScreen?.SerialNumber || ''
   };
 }
 function getWallById(db, id) { return validRows(db.ChargingWalls, 'ChargingWallId').find(w => Number(w.ChargingWallId) === Number(id)) || null; }
@@ -98,17 +98,17 @@ function getWallDetails(id) {
   const welcomeScreen = validRows(db.WelcomeScreens, 'WelcomeScreenId').find(s => Number(s.ChargingWallId) === Number(wall.ChargingWallId)) || null;
   return { wall, model, welcomeScreen };
 }
-function findWelcomeScreenBySerial(serialNumber) {
+function findWelcomeScreenByC2MSerialNumber(serialNumber) {
   const db = readDb();
   const serial = normSerial(serialNumber);
   if (!serial) return null;
   return validRows(db.WelcomeScreens, 'WelcomeScreenId').find(w => normSerial(w.SerialNumber) === serial) || null;
 }
-function assertWelcomeScreenSerialBelongsToWall(serialNumber, chargingWallId = null) {
-  const screen = findWelcomeScreenBySerial(serialNumber);
-  if (!screen) throw new Error(`Welcome screen serial was not found in local cloud: ${serialNumber}`);
+function assertWelcomeScreenC2MSerialNumberBelongsToWall(serialNumber, chargingWallId = null) {
+  const screen = findWelcomeScreenByC2MSerialNumber(serialNumber);
+  if (!screen) throw new Error(`Welcome screen C2M serial number was not found in local cloud: ${serialNumber}`);
   if (chargingWallId !== null && chargingWallId !== undefined && chargingWallId !== '' && Number(screen.ChargingWallId) !== Number(chargingWallId)) {
-    throw new Error(`Welcome screen serial ${serialNumber} belongs to another charging wall`);
+    throw new Error(`Welcome screen C2M serial number ${serialNumber} belongs to another charging wall`);
   }
   return screen;
 }
@@ -173,12 +173,12 @@ function createWall(payload) {
   assertUniqueChargingWallSerial(db, serial);
   const model = validRows(db.ChargingWallModels, 'ChargingWallModelId').find(m => Number(m.ChargingWallModelId) === Number(payload.ChargingWallModelId));
   if (!model) throw new Error('Model not found');
-  const welcomeSerial = String(payload.WelcomeScreenSerialNumber || '').trim();
+  const welcomeSerial = String(payload.WelcomeScreenC2MSerialNumber || '').trim();
   if (model.HasWelcomeScreen) {
-    serialRequired(welcomeSerial, 'Welcome screen serial number');
-    assertUniqueWelcomeScreenSerial(db, welcomeSerial);
+    serialRequired(welcomeSerial, 'Welcome screen C2M serial number');
+    assertUniqueWelcomeScreenC2MSerialNumber(db, welcomeSerial);
   } else if (welcomeSerial) {
-    assertUniqueWelcomeScreenSerial(db, welcomeSerial);
+    assertUniqueWelcomeScreenC2MSerialNumber(db, welcomeSerial);
   }
   const row = {
     ChargingWallId: nextId(db.ChargingWalls, 'ChargingWallId'),
@@ -267,7 +267,7 @@ function saveWallConfiguration(payload) {
   const db = readDb();
   const wall = getWallById(db, payload.ChargingWallId);
   if (!wall) throw new Error('Charging wall not found');
-  if (payload.WelcomeScreenSerialNumber) assertWelcomeScreenSerialBelongsToWall(payload.WelcomeScreenSerialNumber, payload.ChargingWallId);
+  if (payload.WelcomeScreenC2MSerialNumber) assertWelcomeScreenC2MSerialNumberBelongsToWall(payload.WelcomeScreenC2MSerialNumber, payload.ChargingWallId);
 
   db.ChargingSlots = validRows(db.ChargingSlots, 'ChargingSlotId');
 
@@ -314,27 +314,12 @@ function createCheckInStation(payload) {
   db.ChargingWalls = validRows(db.ChargingWalls, 'ChargingWallId');
   db.WelcomeScreens = validRows(db.WelcomeScreens, 'WelcomeScreenId');
   const seenWallIds = new Set();
-  const seenWelcomeSerials = new Set();
   for (const item of wallsPayload) {
     if (seenWallIds.has(Number(item.ChargingWallId))) throw new Error('The same charging wall was selected more than once');
     seenWallIds.add(Number(item.ChargingWallId));
-    if (item.WelcomeScreenSerial) {
-      const serialKey = normSerial(item.WelcomeScreenSerial);
-      if (seenWelcomeSerials.has(serialKey)) throw new Error(`The same welcome screen serial was selected more than once: ${item.WelcomeScreenSerial}`);
-      seenWelcomeSerials.add(serialKey);
-    }
     const wall = getWallById(db, item.ChargingWallId);
     if (!wall) throw new Error(`Charging wall was not found: ${item.ChargingWallId}`);
     if (Number(wall.Status || 0) !== 1) throw new Error(`Charging wall ${wall.SerialNumber} cannot be added to a check-in station because its status is not pass`);
-    const model = validRows(db.ChargingWallModels, 'ChargingWallModelId').find(m => Number(m.ChargingWallModelId) === Number(wall.ChargingWallModelId));
-    const dbWelcomeScreen = validRows(db.WelcomeScreens, 'WelcomeScreenId').find(ws => Number(ws.ChargingWallId) === Number(wall.ChargingWallId)) || null;
-    item.WelcomeScreenSerial = item.WelcomeScreenSerial || dbWelcomeScreen?.SerialNumber || '';
-    if (model && model.HasWelcomeScreen) {
-      serialRequired(item.WelcomeScreenSerial, 'Welcome screen serial number');
-      assertWelcomeScreenSerialBelongsToWall(item.WelcomeScreenSerial, wall.ChargingWallId);
-    } else if (item.WelcomeScreenSerial) {
-      assertWelcomeScreenSerialBelongsToWall(item.WelcomeScreenSerial, wall.ChargingWallId);
-    }
   }
   const station = { CheckInStationId: nextId(db.CheckInStations, 'CheckInStationId'), Name: String(payload.Name || '').trim(), StoreId: Number(payload.StoreId) };
   db.CheckInStations.push(station);
@@ -361,6 +346,6 @@ module.exports = {
   saveWallConfiguration,
   provisionDevice,
   createCheckInStation,
-  findWelcomeScreenBySerial,
-  assertWelcomeScreenSerialBelongsToWall
+  findWelcomeScreenByC2MSerialNumber,
+  assertWelcomeScreenC2MSerialNumberBelongsToWall
 };
