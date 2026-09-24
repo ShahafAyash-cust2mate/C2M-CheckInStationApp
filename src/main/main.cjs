@@ -122,6 +122,19 @@ function createWindow() {
   else win.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
 }
 
+function broadcastSettings(settings) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    try {
+      win.webContents.send('settings:changed', settings);
+    } catch (error) {
+      logger.warn('Failed to broadcast settings change', { message: error.message || String(error) });
+    }
+  }
+}
+
+function profileKey(settings) {
+  return `${settings?.cloudEnvironment || ''}|${settings?.cloudCustomer || ''}`;
+}
 
 ipcMain.handle('nfc:listPorts', () => nfc.listSerialPorts());
 ipcMain.handle('nfc:autoDetectPort', () => nfc.autoDetectPort());
@@ -178,8 +191,21 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 
 
 ipcMain.handle('settings:read', () => settingsService.readSettings());
-ipcMain.handle('settings:save', (_e, settings) => settingsService.saveSettings(settings));
-ipcMain.handle('settings:reset', () => settingsService.resetSettings());
+ipcMain.handle('settings:getCloudProfiles', () => settingsService.getCloudProfilesPublic());
+ipcMain.handle('settings:save', (_e, settings) => {
+  const before = settingsService.readSettings();
+  const saved = settingsService.saveSettings(settings);
+  if (profileKey(before) !== profileKey(saved)) remoteCloud.resetAuthCache();
+  broadcastSettings(saved);
+  return saved;
+});
+ipcMain.handle('settings:reset', () => {
+  const before = settingsService.readSettings();
+  const saved = settingsService.resetSettings();
+  if (profileKey(before) !== profileKey(saved)) remoteCloud.resetAuthCache();
+  broadcastSettings(saved);
+  return saved;
+});
 
 ipcMain.handle('scanner:testConnection', (_e, macFragment) => scanner.testConnection(macFragment));
 ipcMain.handle('scanner:readScan', (_e, payload) => scanner.readScan(payload.macFragment, payload.timeoutMs));

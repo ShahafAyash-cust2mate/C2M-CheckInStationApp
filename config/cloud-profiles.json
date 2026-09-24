@@ -1,0 +1,71 @@
+{
+  "DEV": {
+    "Customer1": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer2": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer3": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    }
+  },
+  "TEST": {
+    "Customer1": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer2": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer3": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    }
+  },
+  "PROD": {
+    "Customer1": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer2": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    },
+    "Customer3": {
+      "cloudBaseUrl": "",
+      "retailerBaseUrl": "",
+      "oauthTokenUrl": "",
+      "oauthClientId": "",
+      "oauthClientSecret": ""
+    }
+  }
+}

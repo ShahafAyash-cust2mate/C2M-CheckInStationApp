@@ -10,7 +10,6 @@ function trimSlash(value) { return String(value || '').trim().replace(/\/+$/, ''
 
 function normalizeRetailerBaseUrl(value) {
   let base = String(value || '').trim();
-  if (!base) base = 'https://customer1.cart.dev.do-c2m.com/retailer/v1';
   base = base.replace(/\/docs\/?#?\/?$/i, '');
   base = base.replace(/\/docs#\/?$/i, '');
   base = base.replace(/\/docs.*$/i, '');
@@ -48,23 +47,30 @@ function errFromBody(status, text) {
   }
 }
 function getConfig() {
-  const s = settingsService.readSettings();
-  const cloudBaseUrl = trimSlash(s.cloudBaseUrl || s.cloudApiBaseUrl || '');
-  const tokenUrl = String(s.cloudTokenUrl || '').trim() || (cloudBaseUrl ? `${cloudBaseUrl.replace(/\/check-in-stations$/,'')}/oauth2/token` : '');
+  const s = settingsService.readCloudConfig();
+  const cloudBaseUrl = trimSlash(s.cloudBaseUrl || '');
   return {
     enabled: true,
     cloudBaseUrl,
     retailerBaseUrl: normalizeRetailerBaseUrl(s.retailerBaseUrl),
-    tokenUrl,
-    clientId: String(s.cloudClientId || '').trim(),
-    clientSecret: String(s.cloudClientSecret || ''),
-    timeoutMs: Number(s.cloudRequestTimeoutMs || 30000)
+    tokenUrl: String(s.tokenUrl || '').trim(),
+    clientId: String(s.clientId || '').trim(),
+    clientSecret: String(s.clientSecret || ''),
+    environment: s.environment,
+    customer: s.customer,
+    timeoutMs: Number(s.timeoutMs || 30000)
   };
 }
 function ensureConfig(cfg) {
-    if (!cfg.cloudBaseUrl) throw new Error('Cloud Base URL is missing in Settings');
-  if (!cfg.tokenUrl) throw new Error('Cloud Token URL is missing in Settings');
-  if (!cfg.clientId || !cfg.clientSecret) throw new Error('Cloud OAuth client ID/secret are missing in Settings');
+  const label = `${cfg.environment || 'Unknown'} / ${cfg.customer || 'Unknown'}`;
+  if (!cfg.cloudBaseUrl) throw new Error(`Cloud Base URL is missing for ${label}`);
+  if (!cfg.retailerBaseUrl) throw new Error(`Retailer Base URL is missing for ${label}`);
+  if (!cfg.tokenUrl) throw new Error(`Cloud Token URL is missing for ${label}`);
+  if (!cfg.clientId || !cfg.clientSecret) throw new Error(`Cloud OAuth client ID/secret are missing for ${label}`);
+}
+function resetAuthCache() {
+  tokenCache = { accessToken: '', expiresAt: 0, key: '' };
+  logger.info('OAuth token cache cleared');
 }
 async function withTimeout(promise, timeoutMs) {
   const ac = new AbortController();
@@ -75,9 +81,9 @@ async function withTimeout(promise, timeoutMs) {
 async function getAccessToken() {
   const cfg = getConfig();
   ensureConfig(cfg);
-  logger.info('OAuth token request/config', { tokenUrl: cfg.tokenUrl, clientId: cfg.clientId });
-  const key = `${cfg.tokenUrl}|${cfg.clientId}`;
-  if (tokenCache.accessToken && tokenCache.key === key && Date.now() < tokenCache.expiresAt - 30000) { logger.info('OAuth token cache hit', { tokenUrl: cfg.tokenUrl, clientId: cfg.clientId }); return tokenCache.accessToken; }
+  logger.info('OAuth token request/config', { environment: cfg.environment, customer: cfg.customer, tokenUrl: cfg.tokenUrl, clientId: cfg.clientId });
+  const key = `${cfg.environment}|${cfg.customer}|${cfg.tokenUrl}|${cfg.clientId}`;
+  if (tokenCache.accessToken && tokenCache.key === key && Date.now() < tokenCache.expiresAt - 30000) { logger.info('OAuth token cache hit', { environment: cfg.environment, customer: cfg.customer, tokenUrl: cfg.tokenUrl, clientId: cfg.clientId }); return tokenCache.accessToken; }
 
   const basic = Buffer.from(`${cfg.clientId}:${cfg.clientSecret}`, 'ascii').toString('base64');
   const resp = await withTimeout((signal) => fetch(cfg.tokenUrl, {
@@ -98,7 +104,7 @@ async function getAccessToken() {
     expiresAt: Date.now() + Number(json.expires_in || 3300) * 1000,
     key
   };
-  logger.info('OAuth token request success', { tokenUrl: cfg.tokenUrl, expiresIn: json.expires_in || 3300 });
+  logger.info('OAuth token request success', { environment: cfg.environment, customer: cfg.customer, tokenUrl: cfg.tokenUrl, expiresIn: json.expires_in || 3300 });
   return tokenCache.accessToken;
 }
 function apiPath(path) {
@@ -468,8 +474,7 @@ function retailerBaseUrlCandidates() {
 }
 
 async function getCustomers() {
-  // v85: restored the exact retailer root call that worked earlier:
-  // GET https://customer1.cart.dev.do-c2m.com/retailer/v1/retailers
+  // Uses the selected profile's retailer root call.
   // Stores are cached from this same response; no second store API call.
   const base = retailerBaseUrlCandidates()[0];
   const url = `${base}/retailers`;
@@ -544,5 +549,6 @@ module.exports = {
   saveWallConfiguration,
   createCheckInStation,
   toLocalStatus,
-  toCamelStatus
+  toCamelStatus,
+  resetAuthCache
 };

@@ -3605,3 +3605,25 @@ input {
   transform-origin: top left !important;
   height: 220px !important;
 }
+.appFooter {
+  grid-template-columns: minmax(110px, auto) minmax(150px, 1fr) minmax(180px, auto) minmax(130px, auto) !important;
+  gap: 16px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
+.appFooter span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appFooter .footerProfile {
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+}
+.appFooter .footerCopyright {
+  text-align: center;
+}
+.appFooter .footerHelp {
+  text-align: right;
+}

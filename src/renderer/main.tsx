@@ -10,7 +10,7 @@ type Row = Record<string, any>;
 type Lang = 'he' | 'en';
 type DeviceStatus = { connected: boolean; portPath: string; message: string; version?: string };
 
-const APP_VERSION = '1.18';
+const APP_VERSION = '1.20';
 const DEVICE_STATE_KEY = 'c2m-device-state';
 
 function loadDeviceState(): any {
@@ -63,6 +63,21 @@ function noticeClass(message: string) {
   return 'notice successNotice';
 }
 
+function profileLabel(settings: any) {
+  const environment = String(settings?.cloudEnvironment || 'DEV').toUpperCase();
+  const customer = String(settings?.cloudCustomer || 'Customer1');
+  return `${environment} / ${customer}`;
+}
+
+function AppFooter({ appSettings }: { appSettings: any }) {
+  return <footer className="appFooter">
+    <span>Version {APP_VERSION}</span>
+    <span className="footerProfile">{profileLabel(appSettings)}</span>
+    <span className="footerCopyright">© 2025 Cust2Mate Inc.</span>
+    <span className="footerHelp">? &nbsp; Help & Support</span>
+  </footer>;
+}
+
 
 const DEFAULT_APP_SETTINGS = {
   nfcActionTimeoutMs: 10000,
@@ -74,10 +89,8 @@ const DEFAULT_APP_SETTINGS = {
   arduinoCommandTimeoutMs: 2500,
   openWallDurationSec: 10,
   cloudUseRemote: true,
-  cloudBaseUrl: 'https://customer1.cart.dev.do-c2m.com/device-management/v1',
-  cloudTokenUrl: 'https://auth.dev.do-c2m.com/oauth2/token',
-  cloudClientId: '',
-  cloudClientSecret: '',
+  cloudEnvironment: 'DEV',
+  cloudCustomer: 'Customer1',
   cloudRequestTimeoutMs: 30000
 };
 
@@ -1855,6 +1868,13 @@ function SettingsWindow({ lang }: {lang:Lang}) {
   const [settings, setSettings] = useState<any>(DEFAULT_APP_SETTINGS);
   const [msg, setMsg] = useState('');
   const [scannerDevices, setScannerDevices] = useState<any[]>([]);
+  const profileOptions = settings.cloudProfileOptions || {};
+  const environments = profileOptions.environments || ['DEV', 'TEST', 'PROD'];
+  const customersByEnvironment = profileOptions.customersByEnvironment || {};
+  const activeEnvironment = String(settings.cloudEnvironment || 'DEV').toUpperCase();
+  const customers = customersByEnvironment[activeEnvironment] || ['Customer1', 'Customer2', 'Customer3'];
+  const activeCustomer = settings.cloudCustomer || customers[0] || 'Customer1';
+  const resolvedProfile = profileOptions.profiles?.[activeEnvironment]?.[activeCustomer] || settings.cloudProfilePublic || {};
 
   async function load() {
     setSettings({ ...DEFAULT_APP_SETTINGS, ...await window.settingsApi.read() });
@@ -1882,7 +1902,20 @@ function SettingsWindow({ lang }: {lang:Lang}) {
   function update(key:string, value:any) {
     setSettings((s:any) => ({ ...s, [key]: value }));
   }
+  function updateEnvironment(environment: string) {
+    const env = String(environment || 'DEV').toUpperCase();
+    const nextCustomers = customersByEnvironment[env] || ['Customer1', 'Customer2', 'Customer3'];
+    setSettings((s:any) => ({ ...s, cloudEnvironment: env, cloudCustomer: nextCustomers[0] || 'Customer1' }));
+  }
+  function updateCustomer(customer: string) {
+    setSettings((s:any) => ({ ...s, cloudCustomer: customer }));
+  }
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    return window.settingsApi.onChanged?.((next:any) => {
+      setSettings({ ...DEFAULT_APP_SETTINGS, ...next });
+    });
+  }, []);
 
   return <main className="settingsWindow" dir={lang==='he'?'rtl':'ltr'}>
     <div className="panel settingsPanel">
@@ -1914,14 +1947,25 @@ function SettingsWindow({ lang }: {lang:Lang}) {
         <div></div>
         <label>Cloud mode</label>
         <div className="notice successNotice">Real cloud only. Local DB fallback is disabled.</div>
+        <label>Environment</label>
+        <select value={activeEnvironment} onChange={e=>updateEnvironment(e.target.value)}>
+          {environments.map((environment:string)=><option key={environment} value={environment}>{environment}</option>)}
+        </select>
+        <label>Customer</label>
+        <select value={activeCustomer} onChange={e=>updateCustomer(e.target.value)}>
+          {customers.map((customer:string)=><option key={customer} value={customer}>{customer}</option>)}
+        </select>
         <label>Cloud Base URL</label>
-        <input value={settings.cloudBaseUrl || ''} onChange={e=>update('cloudBaseUrl', e.target.value)} placeholder="https://... or https://.../check-in-stations"/>
-        <label>Retailer Base URL</label><input value={settings.retailerBaseUrl||''} onChange={e=>setSettings({...settings, retailerBaseUrl:e.target.value})}/><label>OAuth Token URL</label>
-        <input value={settings.cloudTokenUrl || ''} onChange={e=>update('cloudTokenUrl', e.target.value)} placeholder="https://.../oauth2/token"/>
+        <div className="readonlyField">{resolvedProfile.cloudBaseUrl || 'Not configured'}</div>
+        <label>Retailer Base URL</label>
+        <div className="readonlyField">{resolvedProfile.retailerBaseUrl || 'Not configured'}</div>
+        <label>OAuth Token URL</label>
+        <div className="readonlyField">{resolvedProfile.oauthTokenUrl || 'Not configured'}</div>
         <label>OAuth Client ID</label>
-        <input value={settings.cloudClientId || ''} onChange={e=>update('cloudClientId', e.target.value)} />
+        <div className="readonlyField">{resolvedProfile.oauthClientId || 'Not configured'}</div>
         <label>OAuth Client Secret</label>
-        <input type="password" value={settings.cloudClientSecret || ''} onChange={e=>update('cloudClientSecret', e.target.value)} />
+        <div className="readonlyField">{resolvedProfile.oauthClientSecretConfigured ? 'Configured' : 'Not configured'}</div>
+        {settings.cloudProfileError&&<><label>Profile status</label><div className="notice errorNotice">{settings.cloudProfileError}</div></>}
         <label>Cloud request timeout (ms)</label>
         <input type="number" value={settings.cloudRequestTimeoutMs || 30000} onChange={e=>update('cloudRequestTimeoutMs', Number(e.target.value))}/>
       </div>
@@ -1931,6 +1975,7 @@ function SettingsWindow({ lang }: {lang:Lang}) {
       </div>
       {msg&&<div className={noticeClass(msg)}>{msg}</div>}
     </div>
+    <AppFooter appSettings={settings}/>
   </main>
 }
 
@@ -2076,6 +2121,11 @@ function App(){
       .then((s:any)=>setAppSettings({...DEFAULT_APP_SETTINGS,...s}))
       .catch(()=>setAppSettings(DEFAULT_APP_SETTINGS));
   },[]);
+  useEffect(() => {
+    return window.settingsApi.onChanged?.((next:any) => {
+      setAppSettings({ ...DEFAULT_APP_SETTINGS, ...next });
+    });
+  }, []);
 
   const deviceState = useMemo(()=>({nfc:nfcStatus, arduino:arduinoStatus, scanner:scannerStatus}),[nfcStatus,arduinoStatus,scannerStatus]);
 
@@ -2169,7 +2219,7 @@ function App(){
       <section className="appContent">
         <DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/>
       </section>
-      <footer className="appFooter"><span>Version {APP_VERSION}</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
+      <AppFooter appSettings={appSettings}/>
     </main>;
   }
 
@@ -2187,7 +2237,7 @@ function App(){
       {tab==='testSlot'&&<TestSpecificSlot lang={lang} deviceState={deviceState} appSettings={appSettings} onFinish={()=>setTab('home')}/>}
       {tab==='deviceManager'&&<section className="deviceManagerScreen"><BackHomeButton onClick={()=>setTab('home')}/><DeviceManager deviceState={deviceState} appSettings={appSettings} onNfcStatusChange={updateNfcStatus} onArduinoStatusChange={updateArduinoStatus} onDetectNfc={detectNfc} onDetectArduino={detectArduino} onDetectScanner={detectScanner}/></section>}
     </section>
-    <footer className="appFooter"><span>Version {APP_VERSION}</span><span>© 2025 Cust2Mate Inc.</span><span className="footerHelp">? &nbsp; Help & Support</span></footer>
+    <AppFooter appSettings={appSettings}/>
   </main>;
 }
 

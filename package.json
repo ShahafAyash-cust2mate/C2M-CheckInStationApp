@@ -1,6 +1,6 @@
 {
   "name": "c2m-checkin-station-setup",
-  "version": "1.18.0",
+  "version": "1.20.0",
   "private": true,
   "main": "src/main/main.cjs",
   "scripts": {
@@ -56,6 +56,10 @@
       {
         "from": "data/local-cloud-db-default.json",
         "to": "data/local-cloud-db-default.json"
+      },
+      {
+        "from": "config/cloud-profiles.json",
+        "to": "config/cloud-profiles.json"
       }
     ],
     "win": {

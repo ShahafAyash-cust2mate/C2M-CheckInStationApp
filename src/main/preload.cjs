@@ -45,8 +45,14 @@ contextBridge.exposeInMainWorld('arduinoApi', {
 
 contextBridge.exposeInMainWorld('settingsApi', {
   read: () => ipcRenderer.invoke('settings:read'),
+  getCloudProfiles: () => ipcRenderer.invoke('settings:getCloudProfiles'),
   save: (settings) => ipcRenderer.invoke('settings:save', settings),
-  reset: () => ipcRenderer.invoke('settings:reset')
+  reset: () => ipcRenderer.invoke('settings:reset'),
+  onChanged: (callback) => {
+    const listener = (_event, settings) => callback(settings);
+    ipcRenderer.on('settings:changed', listener);
+    return () => ipcRenderer.removeListener('settings:changed', listener);
+  }
 });
 
 contextBridge.exposeInMainWorld('scannerApi', {
